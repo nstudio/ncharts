@@ -15,10 +15,12 @@
       "~/*": ["src/*"],
       "@/*": ["src/*"],
       "@nstudio/nstreamdown": ["../../packages/nstreamdown/index.ios.ts"],
-      "@nstudio/nstreamdown/angular": ["../../packages/nstreamdown/angular/index.ts"]
+      "@nstudio/nstreamdown/angular": ["../../packages/nstreamdown/angular/index.ts"],
+      "@nstudio/ncharts": ["../../packages/ncharts/index.ios.ts"],
+      "@nstudio/ncharts/angular": ["../../packages/ncharts/angular/index.ts"]
     }
   },
-  "include": ["src/tests/**/*.ts", "src/**/*.ios.ts", "src/**/*.android.ts"],
+  "include": ["src/tests/**/*.ts", "src/**/*.ios.ts", "src/**/*.android.ts", "../../packages/**/*.ios.ts", "../../packages/**/*.android.ts"],
   "files": ["./src/main.ts", "./references.d.ts", "./src/polyfills.ts"],
   "exclude": ["node_modules", "platforms", "e2e"]
 }

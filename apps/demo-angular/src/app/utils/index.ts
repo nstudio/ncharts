@@ -1,9 +1,11 @@
 /**
- * Demo Menu Utilities
+ * Demo Utilities
  *
  * Provides native platform menus for iOS and Android.
+ * Provides reactive theme service for dark/light mode.
  */
 
+export { ThemeService, type ThemeMode } from './theme.service';
 export type { MenuItem, MenuConfig, MenuResult } from './menu.common';
 import { showMenu as platformShowMenu } from './menu';
 

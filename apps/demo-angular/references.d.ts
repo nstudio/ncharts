@@ -1,4 +1,5 @@
 /// <reference path="../../references.d.ts" />
+/// <reference path="../../packages/ncharts/references.d.ts" />
 
 // Native iOS SyntaxHighlighter declarations
 declare class SyntaxHighlighter extends NSObject {

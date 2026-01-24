@@ -30,7 +30,9 @@
       "@nstudio/nstreamdown/vue": ["packages/nstreamdown/vue/index.ts"],
       "@nstudio/nstreamdown/react": ["packages/nstreamdown/react/index.ts"],
       "@nstudio/nstreamdown/solid": ["packages/nstreamdown/solid/index.ts"],
-      "@nstudio/nstreamdown/svelte": ["packages/nstreamdown/svelte/index.ts"]
+      "@nstudio/nstreamdown/svelte": ["packages/nstreamdown/svelte/index.ts"],
+      "@nstudio/ncharts": ["packages/ncharts/index.d.ts"],
+      "@nstudio/ncharts/angular": ["packages/ncharts/angular/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

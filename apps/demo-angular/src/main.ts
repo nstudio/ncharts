@@ -1,5 +1,4 @@
-// Import Angular compiler for JIT fallback (needed when library isn't fully AOT compiled)
-import '@angular/compiler';
+// import '@angular/compiler';
 
 import { bootstrapApplication, provideNativeScriptHttpClient, provideNativeScriptRouter, runNativeScriptAngularApp } from '@nativescript/angular';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -10,8 +9,13 @@ import './global';
 
 // Register custom streamdown elements from the plugin
 import { registerStreamdownElements } from '@nstudio/nstreamdown/angular';
-import { Application, Color } from '@nativescript/core';
 registerStreamdownElements();
+
+// Register chart elements from ncharts plugin
+import { NCharts } from '@nstudio/ncharts';
+// NCharts.debug = true;
+import { registerNchartsElements } from '@nstudio/ncharts/angular';
+registerNchartsElements();
 
 runNativeScriptAngularApp({
   appModuleBootstrap: () => {

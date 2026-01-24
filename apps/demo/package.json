@@ -5,7 +5,8 @@
   "repository": "<fill-your-repository-here>",
   "dependencies": {
     "@nativescript/core": "*",
-    "@nstudio/nstreamdown": "file:../../packages/nstreamdown"
+    "@nstudio/nstreamdown": "file:../../packages/nstreamdown",
+    "@nstudio/ncharts": "file:../../packages/ncharts"
   },
   "devDependencies": {
     "@nativescript/android": "~9.0.0",

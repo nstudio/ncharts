@@ -222,6 +222,7 @@ export class ChatDemo {
     };
 
     const result = await showMenu(view, config);
+    console.log('result:', result);
     if (result) {
       this.sendPrompt(result.itemId);
     }

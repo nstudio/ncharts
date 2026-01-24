@@ -120,6 +120,13 @@ module.exports = {
           description: '@nstudio/nstreamdown: Build',
         },
       },
+      // @nstudio/ncharts
+      ncharts: {
+        build: {
+          script: 'nx run ncharts:build.all',
+          description: '@nstudio/ncharts: Build',
+        },
+      },
       'build-all': {
         script: 'nx run-many --target=build.all --all',
         description: 'Build all packages',
@@ -133,6 +140,10 @@ module.exports = {
       nstreamdown: {
         script: 'nx run nstreamdown:focus',
         description: 'Focus on @nstudio/nstreamdown',
+      },
+      ncharts: {
+        script: 'nx run ncharts:focus',
+        description: 'Focus on @nstudio/ncharts',
       },
       reset: {
         script: 'nx g @nativescript/plugin-tools:focus-packages',

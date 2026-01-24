@@ -1,3 +1,6 @@
+- [@nstudio/ncharts](packages/ncharts/README.md)
+- [@nstudio/nstreamdown](packages/nstreamdown/README.md)
+
 # nstreamdown
 
 Native streaming markdown for NativeScript apps.

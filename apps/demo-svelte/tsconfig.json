@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "@nstudio/nstreamdown": ["../../packages/nstreamdown/index.ios.ts"],
-      "@nstudio/nstreamdown/svelte": ["../../packages/nstreamdown/svelte/index.ts"]
+      "@nstudio/nstreamdown/svelte": ["../../packages/nstreamdown/svelte/index.ts"],
+      "@nstudio/ncharts": ["../../packages/ncharts/index.d.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.svelte"],

@@ -1,0 +1,66 @@
+{
+  "name": "ncharts",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/ncharts",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/ncharts",
+        "tsConfig": "packages/ncharts/tsconfig.json",
+        "packageJson": "packages/ncharts/package.json",
+        "main": "packages/ncharts/index.d.ts",
+        "assets": [
+          "packages/ncharts/*.md",
+          "packages/ncharts/index.d.ts",
+          "packages/ncharts/nativescript.config.ts",
+          "LICENSE",
+          {
+            "glob": "**/*",
+            "input": "packages/ncharts/platforms/",
+            "output": "./platforms/"
+          }
+        ],
+        "dependsOn": [
+          {
+            "target": "build.all",
+            "projects": "dependencies"
+          }
+        ]
+      }
+    },
+    "build.all": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["node tools/scripts/build-finish.ts ncharts"],
+        "parallel": false
+      },
+      "outputs": ["{workspaceRoot}/dist/packages/ncharts"],
+      "dependsOn": [
+        {
+          "target": "build.all",
+          "projects": "dependencies"
+        },
+        {
+          "target": "build",
+          "projects": "self"
+        }
+      ]
+    },
+    "focus": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["nx g @nativescript/plugin-tools:focus-packages ncharts"],
+        "parallel": false
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:eslint",
+      "options": {
+        "lintFilePatterns": ["packages/ncharts/**/*.ts"]
+      }
+    }
+  },
+  "tags": []
+}

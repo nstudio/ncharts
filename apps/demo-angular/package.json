@@ -5,7 +5,8 @@
   "private": true,
   "dependencies": {
     "@nativescript/core": "file:../../node_modules/@nativescript/core",
-    "@nstudio/nstreamdown": "file:../../packages/nstreamdown"
+    "@nstudio/nstreamdown": "file:../../packages/nstreamdown",
+    "@nstudio/ncharts": "file:../../packages/ncharts"
   },
   "devDependencies": {
     "@nativescript/android": "9.0.2",

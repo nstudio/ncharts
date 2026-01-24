@@ -1,32 +1,7 @@
-import { View } from '@nativescript/core';
-import { ensureMainThread } from './menu.common';
+import { View, Utils } from '@nativescript/core';
 import type { MenuItem, MenuConfig, MenuResult } from './menu.common';
 
 export type { MenuItem, MenuConfig, MenuResult };
-
-// Declare iOS types
-declare const UIDevice: any;
-declare const UIView: any;
-declare const UIImage: any;
-declare const UIAction: any;
-declare const UIMenuElementAttributes: any;
-declare const UIMenu: any;
-declare type UIMenuOptions = any;
-declare const UIButton: any;
-declare const UIButtonType: any;
-declare const CGRectMake: any;
-declare const UIViewAutoresizing: any;
-declare const UIColor: any;
-declare const UIControlState: any;
-declare const UIAlertController: any;
-declare const UIAlertControllerStyle: any;
-declare const UIAlertAction: any;
-declare const UIAlertActionStyle: any;
-declare const UIPopoverArrowDirection: any;
-declare const UIApplication: any;
-declare const UIWindowScene: any;
-declare type UIViewController = any;
-declare type UIMenuElement = any;
 
 // Store references for cleanup and callbacks
 const menuButtonMap = new WeakMap<any, any>();
@@ -40,7 +15,7 @@ let menuCounter = 0;
  */
 export function showMenu(anchorView: View, config: MenuConfig): Promise<MenuResult | null> {
   return new Promise((resolve) => {
-    ensureMainThread(() => {
+    Utils.executeOnMainThread(() => {
       const nativeView = anchorView.nativeView as any;
 
       if (!nativeView) {
@@ -156,20 +131,6 @@ function showNativeDropdownMenu(anchorView: any, config: MenuConfig, resolve: (r
   };
 
   setTimeout(checkDismissal, 500);
-
-  // Timeout safety net
-  setTimeout(() => {
-    if (pendingResolvers.has(menuId)) {
-      const resolver = pendingResolvers.get(menuId);
-      pendingResolvers.delete(menuId);
-      const btn = menuButtonMap.get(anchorView);
-      if (btn) {
-        btn.removeFromSuperview();
-        menuButtonMap.delete(anchorView);
-      }
-      if (resolver) resolver(null);
-    }
-  }, 60000);
 }
 
 /**

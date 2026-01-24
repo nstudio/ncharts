@@ -7,9 +7,9 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
-const distPath = path.join(rootDir, 'dist', 'packages', 'nstreamdown');
+const distPaths = [path.join(rootDir, 'dist', 'packages', 'nstreamdown'), path.join(rootDir, 'dist', 'packages', 'ncharts')];
 const symlinkDir = path.join(rootDir, 'node_modules', '@nstudio');
-const symlinkPath = path.join(symlinkDir, 'nstreamdown');
+const symlinkPaths = [path.join(symlinkDir, 'nstreamdown'), path.join(symlinkDir, 'ncharts')];
 
 console.log('Setting up @nstudio/nstreamdown symlink...');
 
@@ -21,42 +21,47 @@ if (!fs.existsSync(symlinkDir)) {
 
 // Remove existing symlink if it exists
 try {
-  const stat = fs.lstatSync(symlinkPath);
-  if (stat.isSymbolicLink() || stat.isDirectory()) {
-    fs.unlinkSync(symlinkPath);
-    console.log('Removed existing symlink');
+  for (const symlinkPath of symlinkPaths) {
+    const stat = fs.lstatSync(symlinkPath);
+    if (stat.isSymbolicLink() || stat.isDirectory()) {
+      fs.unlinkSync(symlinkPath);
+      console.log('Removed existing symlink');
+    }
   }
 } catch (e) {
   // Path doesn't exist, which is fine
 }
 
 // Check if dist exists, if not create placeholder
-if (!fs.existsSync(distPath)) {
-  console.log('dist/packages/nstreamdown not found - will be created on first build');
-  console.log('Run: npx nx build nstreamdown');
+for (let i = 0; i < distPaths.length; i++) {
+  const distPath = distPaths[i];
+  const symlinkPath = symlinkPaths[i];
+  if (!fs.existsSync(distPath)) {
+    console.log('dist/packages/nstreamdown not found - will be created on first build');
+    console.log('Run: npx nx build nstreamdown');
 
-  // Create placeholder directory so symlink works
-  fs.mkdirSync(distPath, { recursive: true });
+    // Create placeholder directory so symlink works
+    fs.mkdirSync(distPath, { recursive: true });
 
-  // Create minimal package.json placeholder
-  const placeholderPackage = {
-    name: '@nstudio/nstreamdown',
-    version: '0.0.0-placeholder',
-    main: 'index.js',
-  };
-  fs.writeFileSync(path.join(distPath, 'package.json'), JSON.stringify(placeholderPackage, null, 2));
+    // Create minimal package.json placeholder
+    const placeholderPackage = {
+      name: '@nstudio/nstreamdown',
+      version: '0.0.0-placeholder',
+      main: 'index.js',
+    };
+    fs.writeFileSync(path.join(distPath, 'package.json'), JSON.stringify(placeholderPackage, null, 2));
 
-  // Create empty index.js
-  fs.writeFileSync(path.join(distPath, 'index.js'), '// Placeholder - run npx nx build nstreamdown\n');
-}
-
-// Create symlink
-try {
-  fs.symlinkSync(distPath, symlinkPath, 'dir');
-  console.log(`✓ Created symlink: node_modules/@nstudio/nstreamdown -> dist/packages/nstreamdown`);
-} catch (e) {
-  console.error('Failed to create symlink:', e.message);
-  process.exit(1);
+    // Create empty index.js
+    fs.writeFileSync(path.join(distPath, 'index.js'), '// Placeholder - run npx nx build nstreamdown\n');
+  }
+  // Create symlink
+  try {
+    fs.symlinkSync(distPath, symlinkPath, 'dir');
+    console.log(`✓ Created symlink: node_modules/@nstudio/nstreamdown -> dist/packages/nstreamdown`);
+  } catch (e) {
+    console.error('Failed to create symlink:', e.message);
+    process.exit(1);
+  }
 }
 
 console.log('Symlink setup complete!');

@@ -7,6 +7,7 @@
       <StackLayout>
         <Button text="add a package first" tap="{{ viewDemo }}" class="btn btn-primary rounded view-demo"/>
 <Button text="nstreamdown" tap="{{ viewDemo }}" class="btn btn-primary rounded view-demo"/>
+<Button text="ncharts" tap="{{ viewDemo }}" class="btn btn-primary rounded view-demo"/>
       </StackLayout>
     </ScrollView>
   </StackLayout>
