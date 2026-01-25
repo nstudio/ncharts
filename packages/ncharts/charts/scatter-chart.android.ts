@@ -126,16 +126,20 @@ export class ScatterChart extends ScatterChartBase {
     for (const ds of this.data!.dataSets) {
       const entries = new java.util.ArrayList<com.github.mikephil.charting.data.Entry>();
 
-      ds.values.forEach((value: any, index: number) => {
-        let entry: com.github.mikephil.charting.data.Entry;
-        if (typeof value === 'number') {
-          entry = new com.github.mikephil.charting.data.Entry(index, value);
-        } else {
-          const x = value.x ?? index;
-          entry = new com.github.mikephil.charting.data.Entry(x, value.y);
-        }
-        entries.add(entry);
-      });
+      // sort before adding into entries
+      // before hitting the Transformer bug
+      const sort = ds.values
+        .map((value: any, index: number) => {
+          if (typeof value === 'number') {
+            return { x: index, y: value };
+          }
+          return { x: value.x ?? index, y: value.y };
+        })
+        .sort((a, b) => a.x - b.x);
+
+      for (const value of sort) {
+        entries.add(new com.github.mikephil.charting.data.Entry(value.x, value.y));
+      }
 
       const dataSet = new com.github.mikephil.charting.data.ScatterDataSet(entries, ds.label);
       if (ds.config) {
@@ -172,10 +176,11 @@ export class ScatterChart extends ScatterChartBase {
       return;
     }
 
-    const highlightArray: com.github.mikephil.charting.highlight.Highlight[] = [];
-    for (const h of highlights) {
+    const highlightArray = Array.create('com.github.mikephil.charting.highlight.Highlight', highlights.length);
+    for (let i = 0; i < highlights.length; i++) {
+      const h = highlights[i];
       const highlight = new com.github.mikephil.charting.highlight.Highlight(h.x, h.y ?? 0, h.dataSetIndex ?? 0);
-      highlightArray.push(highlight);
+      highlightArray[i] = highlight;
     }
     this._native.highlightValues(highlightArray);
   }
