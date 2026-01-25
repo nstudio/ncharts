@@ -1,15 +1,22 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
-    "rootDir": "..",
+    "outDir": "../../../dist/packages/nstreamdown/svelte",
+    "rootDir": ".",
+    "declaration": true,
+    "declarationDir": "../../../dist/packages/nstreamdown/svelte",
     "baseUrl": ".",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
+    "target": "ESNext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "skipLibCheck": true,
     "paths": {
       "@nstudio/nstreamdown": ["../index.d.ts"]
     }
   },
-  "include": ["**/*.ts", "../references.d.ts"],
-  "exclude": ["node_modules"]
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.spec.ts", "**/*.test.ts", "node_modules"]
 }

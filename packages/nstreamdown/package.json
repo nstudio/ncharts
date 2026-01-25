@@ -73,5 +73,19 @@
     "svelte-native": {
       "optional": true
     }
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.ios.js"
+    },
+    "./angular": {
+      "types": "./angular/index.d.ts",
+      "default": "./angular/fesm2022/nstudio-nstreamdown-angular.mjs"
+    },
+    "./react": "./react/index.ts",
+    "./solid": "./solid/index.ts",
+    "./svelte": "./svelte/index.ts",
+    "./vue": "./vue/index.ts"
   }
 }

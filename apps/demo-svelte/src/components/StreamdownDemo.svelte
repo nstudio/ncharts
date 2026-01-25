@@ -1,6 +1,6 @@
 <page>
     <actionBar flat={true} class="bg-slate-50" title="Streaming Demo">
-        <navigationButton text="" android={{ systemIcon: 'ic_menu_back' }} on:tap={() => dispatch('back')} />
+        <navigationButton text="" on:tap={() => dispatch('back')} />
         <actionItem ios={{ position: 'right' }} on:tap={toggleStreaming}>
             {#if isApple && isStreaming}
                 <image src="sys://stop.fill" class="w-5 h-5" />

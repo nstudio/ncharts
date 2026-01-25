@@ -4,15 +4,22 @@ interface DemoItem {
   title: string;
   description: string;
   icon: string;
-  route: 'demo' | 'chat';
+  route: 'demo' | 'chat' | 'charts';
   color: string;
 }
 
 interface HomeProps {
-  onNavigate: (screen: 'demo' | 'chat') => void;
+  onNavigate: (screen: 'demo' | 'chat' | 'charts') => void;
 }
 
 const demos: DemoItem[] = [
+  {
+    title: 'Charts Demo',
+    description: 'Native iOS/Android charting',
+    icon: '📊',
+    route: 'charts',
+    color: 'bg-indigo-100',
+  },
   {
     title: 'Streaming Demo',
     description: 'Watch markdown render in real-time',

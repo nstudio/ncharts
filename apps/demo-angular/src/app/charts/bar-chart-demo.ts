@@ -30,9 +30,9 @@ import { ThemeService } from '../utils';
       <!-- Chart Container -->
       <GridLayout row="1" class="m-4 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4">
         @if (!isHorizontal()) {
-          <BarChart #barChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [highlightPerTapEnabled]="true" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </BarChart>
+          <BarChart #barChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </BarChart>
         } @else {
-          <HorizontalBarChart #barChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [highlightPerTapEnabled]="true" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </HorizontalBarChart>
+          <HorizontalBarChart #barChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </HorizontalBarChart>
         }
       </GridLayout>
 
@@ -62,6 +62,7 @@ export class BarChartDemo {
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
   valueTextColor = computed(() => (this.themeService.isDarkMode() ? '#FFFFFF' : '#374151'));
+  chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'revenue' | 'products' | 'grouped'>('revenue');
   isHorizontal = signal(false);

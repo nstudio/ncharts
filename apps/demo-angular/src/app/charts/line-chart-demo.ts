@@ -22,6 +22,7 @@ export class LineChartDemo {
 
   // Theme-reactive colors for SegmentedBar and other UI elements
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
+  chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'sales' | 'stocks' | 'weather'>('sales');
   chartData = signal<LineChartData>(this.getSalesData());

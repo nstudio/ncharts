@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { start, registerElement, NativeScriptProps, ViewAttributes } from 'react-nativescript';
 import { NativeCodeView } from '@nstudio/nstreamdown';
+import { registerNchartsElements } from '@nstudio/ncharts/react';
 import { App } from './components/App';
 
 // In NativeScript, the app.ts file is the entry point to your application. You
@@ -26,6 +27,9 @@ declare global {
 }
 
 registerElement('nativeCodeView', () => <any>NativeCodeView);
+
+// Register chart elements
+registerNchartsElements();
 
 start(React.createElement(App, {}, null));
 

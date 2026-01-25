@@ -29,7 +29,7 @@ import { ThemeService } from '../utils';
 
       <!-- Chart Container -->
       <GridLayout row="1" class="m-4 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4">
-        <RadarChart #radarChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [webLineWidth]="1.5" webColor="#E5E7EB" [webLineWidthInner]="1" webColorInner="#F3F4F6" [webAlpha]="200" [rotationEnabled]="true" [highlightPerTapEnabled]="true" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </RadarChart>
+        <RadarChart #radarChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [webLineWidth]="1.5" webColor="#E5E7EB" [webLineWidthInner]="1" webColorInner="#F3F4F6" [webAlpha]="200" [rotationEnabled]="true" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </RadarChart>
       </GridLayout>
 
       <!-- Style Selector -->
@@ -58,6 +58,7 @@ export class RadarChartDemo {
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
   valueTextColor = computed(() => (this.themeService.isDarkMode() ? '#FFFFFF' : '#374151'));
+  chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'skills' | 'performance' | 'comparison'>('skills');
   showFill = signal(true);

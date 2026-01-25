@@ -201,6 +201,9 @@ export abstract class ChartBaseDirective implements OnDestroy, AfterViewInit {
     const chartBackgroundColor = this.chartBackgroundColor();
     if (chartBackgroundColor) this.chart.chartBackgroundColor = chartBackgroundColor;
 
+    const chartGridBackgroundColor = this.chartGridBackgroundColor();
+    if (chartGridBackgroundColor) this.chart.chartGridBackgroundColor = chartGridBackgroundColor;
+
     const logEnabled = this.logEnabled();
     if (logEnabled !== undefined) this.chart.logEnabled = logEnabled;
 

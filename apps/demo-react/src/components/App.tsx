@@ -4,9 +4,13 @@ import { FrameNavigationProp } from "react-nativescript-navigation";
 import { Home } from "./Home";
 import { StreamdownDemo } from "./StreamdownDemo";
 import { ChatDemo } from "./ChatDemo";
+import { ChartsHome } from "./ChartsHome";
+import { LineChartDemo } from "./LineChartDemo";
+import { BarChartDemo } from "./BarChartDemo";
+import { PieChartDemo } from "./PieChartDemo";
 
 // Simple navigation state
-type Screen = 'home' | 'demo' | 'chat';
+type Screen = 'home' | 'demo' | 'chat' | 'charts' | 'line' | 'bar' | 'pie';
 
 export const App = () => {
     const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -16,7 +20,12 @@ export const App = () => {
     };
 
     const goBack = () => {
-        setCurrentScreen('home');
+        // If we're in a chart demo, go back to charts home
+        if (['line', 'bar', 'pie'].includes(currentScreen)) {
+            setCurrentScreen('charts');
+        } else {
+            setCurrentScreen('home');
+        }
     };
 
     return (
@@ -24,6 +33,10 @@ export const App = () => {
             {currentScreen === 'home' && <Home onNavigate={navigate} />}
             {currentScreen === 'demo' && <StreamdownDemo onBack={goBack} />}
             {currentScreen === 'chat' && <ChatDemo onBack={goBack} />}
+            {currentScreen === 'charts' && <ChartsHome onNavigate={navigate} onBack={goBack} />}
+            {currentScreen === 'line' && <LineChartDemo onBack={goBack} />}
+            {currentScreen === 'bar' && <BarChartDemo onBack={goBack} />}
+            {currentScreen === 'pie' && <PieChartDemo onBack={goBack} />}
         </frame>
     );
 };

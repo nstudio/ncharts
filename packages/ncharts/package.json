@@ -43,7 +43,15 @@
   "peerDependencies": {
     "@nativescript/core": ">=8.0.0",
     "@nativescript/angular": ">=18.0.0",
-    "@angular/core": ">=18.0.0"
+    "@angular/core": ">=18.0.0",
+    "vue": ">=3.0.0",
+    "nativescript-vue": ">=3.0.0",
+    "react": ">=18.0.0",
+    "react-nativescript": ">=5.0.0",
+    "solid-js": ">=1.0.0",
+    "dominative": ">=0.1.0",
+    "svelte": ">=4.0.0",
+    "@nativescript-community/svelte-native": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "@nativescript/angular": {
@@ -51,6 +59,56 @@
     },
     "@angular/core": {
       "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "nativescript-vue": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-nativescript": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    },
+    "dominative": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "@nativescript-community/svelte-native": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.ios.js"
+    },
+    "./angular": {
+      "types": "./angular/index.d.ts",
+      "default": "./angular/fesm2022/nstudio-ncharts-angular.mjs"
+    },
+    "./react": {
+      "types": "./react/index.d.ts",
+      "default": "./react/index.js"
+    },
+    "./solid": {
+      "types": "./solid/index.d.ts",
+      "default": "./solid/index.js"
+    },
+    "./svelte": {
+      "types": "./svelte/index.d.ts",
+      "default": "./svelte/index.js"
+    },
+    "./vue": {
+      "types": "./vue/index.d.ts",
+      "default": "./vue/index.js"
     }
   }
 }

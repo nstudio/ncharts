@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "declaration": false,
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@nstudio/nstreamdown": ["../../dist/packages/nstreamdown/index.ios.js"],
+      "@nstudio/ncharts": ["../../dist/packages/ncharts/index.ios.js"]
+    }
+  },
+  "include": ["../../dist/packages/nstreamdown/**/*.ts", "../../dist/packages/nstreamdown/**/*.tsx", "../../dist/packages/ncharts/**/*.ts", "../../dist/packages/ncharts/**/*.tsx"]
+}

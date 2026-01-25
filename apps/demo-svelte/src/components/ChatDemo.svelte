@@ -137,7 +137,7 @@ export default defineComponent({
     }
   }
 });
-</script>
+<\/script>
 \`\`\``,
 
         `# Streamdown Features 🎯

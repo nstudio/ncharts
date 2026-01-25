@@ -2,6 +2,14 @@ import { For } from 'solid-js';
 
 const demos = [
   {
+    id: 'charts',
+    title: 'Charts Demo',
+    description: 'Native iOS/Android charting',
+    icon: '📊',
+    color: 'bg-indigo-100',
+    darkColor: 'dark:bg-indigo-900',
+  },
+  {
     id: 'demo',
     title: 'Streaming Demo',
     description: 'Watch markdown render in real-time',

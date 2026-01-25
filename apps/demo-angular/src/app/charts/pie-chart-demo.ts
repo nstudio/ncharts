@@ -29,7 +29,7 @@ import { ThemeService } from '../utils';
 
       <!-- Chart Container -->
       <GridLayout row="1" class="m-4 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4">
-        <PieChart #pieChart [data]="chartData()" [legend]="legendConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [drawHole]="isDonut()" [holeRadius]="holeRadius()" [transparentCircleRadius]="holeRadius() + 5" holeColor="#FFFFFF" [drawCenterText]="isDonut()" [centerText]="centerText()" centerTextColor="#374151" [centerTextSize]="18" [drawSliceText]="true" [usePercentValues]="true" [rotationEnabled]="true" [rotationAngle]="rotationAngle()" [highlightPerTapEnabled]="true" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </PieChart>
+        <PieChart #pieChart [data]="chartData()" [legend]="legendConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [drawHole]="isDonut()" [holeRadius]="holeRadius()" [transparentCircleRadius]="holeRadius() + 5" holeColor="#FFFFFF" [drawCenterText]="isDonut()" [centerText]="centerText()" centerTextColor="#374151" [centerTextSize]="18" [drawSliceText]="true" [usePercentValues]="true" [rotationEnabled]="true" [rotationAngle]="rotationAngle()" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </PieChart>
       </GridLayout>
 
       <!-- Style Selector -->
@@ -57,6 +57,7 @@ export class PieChartDemo {
 
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
+  chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'market' | 'budget' | 'traffic'>('market');
   isDonut = signal(true);

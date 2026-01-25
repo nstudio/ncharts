@@ -29,7 +29,7 @@ import { ThemeService } from '../utils';
 
       <!-- Chart Container -->
       <GridLayout row="1" class="m-4 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4">
-        <ScatterChart #scatterChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [highlightPerTapEnabled]="true" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </ScatterChart>
+        <ScatterChart #scatterChart [data]="chartData()" [legend]="legendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="animationConfig()" [chartDescription]="{ text: getChartTitle(), enabled: true }" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" (select)="onChartSelect($event)" (deselect)="onChartDeselect()" class="h-full"> </ScatterChart>
       </GridLayout>
 
       <!-- Style Selector -->
@@ -58,6 +58,7 @@ export class ScatterChartDemo {
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
   valueTextColor = computed(() => (this.themeService.isDarkMode() ? '#FFFFFF' : '#374151'));
+  chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'correlation' | 'clusters' | 'multiset'>('correlation');
   currentShape = signal<'CIRCLE' | 'SQUARE' | 'TRIANGLE' | 'CROSS' | 'X'>('CIRCLE');

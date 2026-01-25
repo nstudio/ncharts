@@ -22,14 +22,21 @@
             "output": "./platforms/"
           },
           {
+            "glob": "*.d.ts",
+            "input": "packages/nstreamdown/utils/",
+            "output": "./utils/"
+          },
+          {
             "glob": "**/*",
             "input": "packages/nstreamdown/react/",
-            "output": "./react/"
+            "output": "./react/",
+            "ignore": ["**/tsconfig.json"]
           },
           {
             "glob": "**/*",
             "input": "packages/nstreamdown/solid/",
-            "output": "./solid/"
+            "output": "./solid/",
+            "ignore": ["**/tsconfig.json"]
           },
           {
             "glob": "**/*",

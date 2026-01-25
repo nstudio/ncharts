@@ -25,10 +25,11 @@ module.exports = (webpack) => {
       return;
     }
 
-    // Modify svelte-loader exclude to allow @nstudio/nstreamdown
+    // Modify svelte-loader exclude to allow all @nstudio packages
+    // This pattern allows both nstreamdown and ncharts
     config.module
       .rule('svelte')
       .exclude.clear()
-      .add(/node_modules[\\/](?!@nstudio[\\/]nstreamdown)/);
+      .add(/node_modules[\\/](?!@nstudio[\\/])/);
   });
 };

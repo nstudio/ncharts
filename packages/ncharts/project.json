@@ -15,7 +15,13 @@
           "packages/ncharts/*.md",
           "packages/ncharts/index.d.ts",
           "packages/ncharts/nativescript.config.ts",
+          "packages/ncharts/nativescript.webpack.js",
           "LICENSE",
+          {
+            "glob": "*.d.ts",
+            "input": "packages/ncharts/charts/",
+            "output": "./charts/"
+          },
           {
             "glob": "**/*",
             "input": "packages/ncharts/platforms/",

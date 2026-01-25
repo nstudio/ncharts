@@ -6,7 +6,8 @@
   "dependencies": {
     "@nativescript-community/solid-js": "^0.0.7",
     "@nativescript/core": "file:../../node_modules/@nativescript/core",
-    "@nstudio/nstreamdown": "file:../../packages/nstreamdown",
+    "@nstudio/ncharts": "file:../../node_modules/@nstudio/ncharts",
+    "@nstudio/nstreamdown": "file:../../node_modules/@nstudio/nstreamdown",
     "dominative": "^0.1.3",
     "solid-js": "^1.9.4",
     "undom-ng": "^1.1.2"

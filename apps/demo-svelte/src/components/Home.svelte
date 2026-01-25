@@ -10,7 +10,7 @@
                 <label text="@nstudio/nstreamdown" class="text-3xl font-bold text-slate-800" />
                 <label
                     text="Native iOS & Android streaming markdown for NativeScript"
-                    class="text-base text-slate-500 mt-2"
+                    class="text-base text-slate-500 mt-2 leading-[3]"
                     textWrap={true}
                 />
             </stackLayout>
@@ -41,7 +41,7 @@
                             col="1"
                             row="1"
                             text={demo.description}
-                            class="text-sm text-slate-500"
+                            class="text-sm text-slate-500 leading-[3]"
                             textWrap={true}
                         />
                     </gridLayout>
@@ -93,6 +93,13 @@
             description: 'Interactive chat with AI-style message streaming',
             icon: '💬',
             color: 'bg-emerald-500',
+        },
+        {
+            id: 'charts',
+            title: 'Charts',
+            description: 'Native iOS & Android charts with DGCharts and MPAndroidChart',
+            icon: '📊',
+            color: 'bg-purple-500',
         },
     ];
 

@@ -2,10 +2,11 @@
  * Combined Charts Demo Component
  * Shows all chart types in a beautiful scrollable gallery
  */
-import { Component, NO_ERRORS_SCHEMA, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, NO_ERRORS_SCHEMA, ChangeDetectionStrategy, signal, computed, inject } from '@angular/core';
 import { NativeScriptCommonModule, RouterExtensions } from '@nativescript/angular';
 import { LineChartDirective, BarChartDirective, PieChartDirective, ScatterChartDirective, BubbleChartDirective, CandleStickChartDirective, RadarChartDirective } from '@nstudio/ncharts/angular';
 import type { LineChartData, BarChartData, PieChartData, ScatterChartData, BubbleChartData, CandleChartData, RadarChartData, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual } from '@nstudio/ncharts';
+import { ThemeService } from '../utils';
 
 @Component({
   selector: 'CombinedChartsDemo',
@@ -40,7 +41,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="Revenue Trend" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="📈" class="text-xl"></Label>
             </GridLayout>
-            <LineChart height="220" [data]="lineData" [legend]="lineLegendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="lineAnimation()" [dragEnabled]="true" [scaleEnabled]="true" class="m-2 mt-0"> </LineChart>
+            <LineChart height="220" [data]="lineData" [legend]="lineLegendConfig" [xAxis]="xAxisConfig" [yAxis]="yAxisConfig" [animation]="lineAnimation()" [dragEnabled]="true" [scaleEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </LineChart>
           </StackLayout>
 
           <!-- Bar Chart Card -->
@@ -49,7 +50,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="Quarterly Performance" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="📊" class="text-xl"></Label>
             </GridLayout>
-            <BarChart height="200" [data]="barData" [legend]="barLegendConfig" [xAxis]="barXAxisConfig" [yAxis]="yAxisConfig" [animation]="barAnimation()" [highlightPerTapEnabled]="true" class="m-2 mt-0"> </BarChart>
+            <BarChart height="200" [data]="barData" [legend]="barLegendConfig" [xAxis]="barXAxisConfig" [yAxis]="yAxisConfig" [animation]="barAnimation()" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </BarChart>
           </StackLayout>
 
           <!-- Pie Chart Row -->
@@ -57,13 +58,13 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
             <!-- Pie Chart 1 -->
             <StackLayout col="0" class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg mr-2 overflow-hidden">
               <Label text="Market Share" class="text-sm font-bold text-slate-700 dark:text-slate-200 p-3 pb-0"></Label>
-              <PieChart height="180" [data]="pieData1" [legend]="pieLegendConfig" [animation]="pieAnimation()" [drawHole]="true" [holeRadius]="40" [drawCenterText]="true" centerText="Share" [centerTextSize]="12" [sliceTextSize]="9" [drawSliceText]="false" [usePercentValues]="true" class="m-2 mt-0"> </PieChart>
+              <PieChart height="180" [data]="pieData1" [legend]="pieLegendConfig" [animation]="pieAnimation()" [drawHole]="true" [holeRadius]="40" [drawCenterText]="true" centerText="Share" [centerTextSize]="12" [sliceTextSize]="9" [drawSliceText]="false" [usePercentValues]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </PieChart>
             </StackLayout>
 
             <!-- Pie Chart 2 -->
             <StackLayout col="1" class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg ml-2 overflow-hidden">
               <Label text="Traffic Sources" class="text-sm font-bold text-slate-700 dark:text-slate-200 p-3 pb-0"></Label>
-              <PieChart height="180" [data]="pieData2" [legend]="pieLegendConfig" [animation]="pieAnimation()" [drawHole]="true" [holeRadius]="40" [drawCenterText]="true" centerText="Traffic" [centerTextSize]="12" [sliceTextSize]="9" [drawSliceText]="false" [usePercentValues]="true" class="m-2 mt-0"> </PieChart>
+              <PieChart height="180" [data]="pieData2" [legend]="pieLegendConfig" [animation]="pieAnimation()" [drawHole]="true" [holeRadius]="40" [drawCenterText]="true" centerText="Traffic" [centerTextSize]="12" [sliceTextSize]="9" [drawSliceText]="false" [usePercentValues]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </PieChart>
             </StackLayout>
           </GridLayout>
 
@@ -73,7 +74,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="User Activity" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="👥" class="text-xl"></Label>
             </GridLayout>
-            <LineChart height="180" [data]="activityData" [legend]="{ enabled: false }" [xAxis]="activityXAxisConfig" [yAxis]="yAxisConfig" [animation]="activityAnimation()" [dragEnabled]="true" class="m-2 mt-0"> </LineChart>
+            <LineChart height="180" [data]="activityData" [legend]="{ enabled: false }" [xAxis]="activityXAxisConfig" [yAxis]="yAxisConfig" [animation]="activityAnimation()" [dragEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </LineChart>
           </StackLayout>
 
           <!-- Scatter Chart Card -->
@@ -82,7 +83,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="Correlation Analysis" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="🔵" class="text-xl"></Label>
             </GridLayout>
-            <ScatterChart height="200" [data]="scatterData" [legend]="scatterLegendConfig" [xAxis]="scatterXAxisConfig" [yAxis]="yAxisConfig" [animation]="scatterAnimation()" [highlightPerTapEnabled]="true" class="m-2 mt-0"> </ScatterChart>
+            <ScatterChart height="200" [data]="scatterData" [legend]="scatterLegendConfig" [xAxis]="scatterXAxisConfig" [yAxis]="yAxisConfig" [animation]="scatterAnimation()" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </ScatterChart>
           </StackLayout>
 
           <!-- Bubble Chart Card -->
@@ -91,7 +92,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="Market Analysis" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="🫧" class="text-xl"></Label>
             </GridLayout>
-            <BubbleChart height="220" [data]="bubbleData" [legend]="bubbleLegendConfig" [xAxis]="bubbleXAxisConfig" [yAxis]="yAxisConfig" [animation]="bubbleAnimation()" [highlightPerTapEnabled]="true" class="m-2 mt-0"> </BubbleChart>
+            <BubbleChart height="220" [data]="bubbleData" [legend]="bubbleLegendConfig" [xAxis]="bubbleXAxisConfig" [yAxis]="yAxisConfig" [animation]="bubbleAnimation()" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </BubbleChart>
           </StackLayout>
 
           <!-- Candlestick Chart Card -->
@@ -100,7 +101,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="Stock Performance" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="🕯️" class="text-xl"></Label>
             </GridLayout>
-            <CandleStickChart height="220" [data]="candleData" [legend]="candleLegendConfig" [xAxis]="candleXAxisConfig" [yAxis]="yAxisConfig" [animation]="candleAnimation()" [highlightPerTapEnabled]="true" class="m-2 mt-0"> </CandleStickChart>
+            <CandleStickChart height="220" [data]="candleData" [legend]="candleLegendConfig" [xAxis]="candleXAxisConfig" [yAxis]="yAxisConfig" [animation]="candleAnimation()" [highlightPerTapEnabled]="true" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </CandleStickChart>
           </StackLayout>
 
           <!-- Radar Chart Card -->
@@ -109,7 +110,7 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
               <Label col="0" text="Skills Comparison" class="text-base font-bold text-slate-700 dark:text-slate-200"></Label>
               <Label col="1" text="🕸️" class="text-xl"></Label>
             </GridLayout>
-            <RadarChart height="250" [data]="radarData" [legend]="radarLegendConfig" [xAxis]="radarXAxisConfig" [animation]="radarAnimation()" [webLineWidth]="1.5" webColor="#E5E7EB" [webLineWidthInner]="1" webColorInner="#F3F4F6" [webAlpha]="200" class="m-2 mt-0"> </RadarChart>
+            <RadarChart height="250" [data]="radarData" [legend]="radarLegendConfig" [xAxis]="radarXAxisConfig" [animation]="radarAnimation()" [webLineWidth]="1.5" webColor="#E5E7EB" [webLineWidthInner]="1" webColorInner="#F3F4F6" [webAlpha]="200" [chartBackgroundColor]="chartBgColor()" [chartGridBackgroundColor]="chartBgColor()" class="m-2 mt-0"> </RadarChart>
           </StackLayout>
 
           <!-- Refresh Button -->
@@ -126,6 +127,8 @@ import type { LineChartData, BarChartData, PieChartData, ScatterChartData, Bubbl
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CombinedChartsDemo {
+  themeService = inject(ThemeService);
+  chartBgColor = computed(() => this.themeService.colors().bgChart);
   // Animation signals for triggering re-renders
   lineAnimation = signal<ChartAnimation>({ durationX: 1200, durationY: 1200, easingX: 'EaseInOutQuad' });
   barAnimation = signal<ChartAnimation>({ durationX: 1000, durationY: 1000, easingX: 'EaseOutBack' });

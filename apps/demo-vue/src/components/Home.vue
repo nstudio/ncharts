@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 const emit = defineEmits<{
-  navigate: [screen: 'demo' | 'chat'];
+  navigate: [screen: 'demo' | 'chat' | 'charts'];
 }>();
 
 interface DemoItem {
   title: string;
   description: string;
   icon: string;
-  route: 'demo' | 'chat';
+  route: 'demo' | 'chat' | 'charts';
   color: string;
 }
 
@@ -26,6 +26,13 @@ const demos: DemoItem[] = [
     route: 'chat',
     color: 'bg-purple-100',
   },
+  {
+    title: 'Charts',
+    description: 'Native iOS & Android charts',
+    icon: '📊',
+    route: 'charts',
+    color: 'bg-blue-100',
+  },
 ];
 
 const features = ['Streaming markdown', 'Incomplete tokens', 'GFM support', 'Code highlighting', 'Tables', 'Math (LaTeX)', 'Images', 'Native performance', 'Dark mode', 'CJK support'];
@@ -38,7 +45,7 @@ function getFeatureCol(index: number): number {
   return index % 2;
 }
 
-function navigateTo(route: 'demo' | 'chat') {
+function navigateTo(route: 'demo' | 'chat' | 'charts') {
   emit('navigate', route);
 }
 </script>
