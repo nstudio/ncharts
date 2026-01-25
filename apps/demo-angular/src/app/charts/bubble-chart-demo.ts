@@ -33,14 +33,14 @@ import { ThemeService } from '../utils';
       </GridLayout>
 
       <!-- Style Selector -->
-      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm">
+      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
         <SegmentedBarItem title="GDP"></SegmentedBarItem>
         <SegmentedBarItem title="Products"></SegmentedBarItem>
         <SegmentedBarItem title="Social"></SegmentedBarItem>
       </SegmentedBar>
 
       <!-- Controls -->
-      <GridLayout row="3" columns="*, *, *" class="p-4 pt-0">
+      <GridLayout row="3" columns="*, *, *" [ngClass]="{ 'p-4 pt-0': !isAndroid, 'm-4 h-10': isAndroid }">
         <Button col="0" text="Animate" (tap)="animateChart()" class="bg-emerald-500 text-white rounded-md m-1 text-sm"></Button>
         <Button col="1" text="Highlight" (tap)="highlightRandom()" class="bg-purple-500 text-white rounded-md m-1 text-sm"></Button>
         <Button col="2" text="Refresh" (tap)="randomizeData()" class="bg-orange-500 text-white rounded-md m-1 text-sm"></Button>
@@ -54,6 +54,8 @@ import { ThemeService } from '../utils';
 export class BubbleChartDemo {
   @ViewChild('bubbleChart') bubbleChartRef!: ElementRef;
   themeService = inject(ThemeService);
+
+  isAndroid = __ANDROID__;
 
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);

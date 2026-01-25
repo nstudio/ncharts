@@ -30,6 +30,7 @@ export class LineChartDemo {
 
   // Selection state
   private _selectedData = signal<ChartSelectData | null>(null);
+  isAndroid = __ANDROID__;
 
   selectedValue = computed(() => {
     const data = this._selectedData();

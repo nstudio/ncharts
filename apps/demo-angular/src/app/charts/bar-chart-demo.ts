@@ -37,14 +37,14 @@ import { ThemeService } from '../utils';
       </GridLayout>
 
       <!-- Style Selector -->
-      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm">
+      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
         <SegmentedBarItem title="Revenue"></SegmentedBarItem>
         <SegmentedBarItem title="Products"></SegmentedBarItem>
         <SegmentedBarItem title="Grouped"></SegmentedBarItem>
       </SegmentedBar>
 
       <!-- Controls -->
-      <GridLayout row="3" columns="*, *, *" class="p-4 pt-0">
+      <GridLayout row="3" columns="*, *, *" [ngClass]="{ 'p-4 pt-0': !isAndroid, 'm-4 h-10': isAndroid }">
         <Button col="0" text="Animate" (tap)="animateChart()" class="bg-emerald-500 text-white rounded-md m-1 text-sm"></Button>
         <Button col="1" text="Flip" (tap)="toggleOrientation()" class="bg-purple-500 text-white rounded-md m-1 text-sm"></Button>
         <Button col="2" text="Colors" (tap)="randomizeColors()" class="bg-orange-500 text-white rounded-md m-1 text-sm"></Button>
@@ -58,6 +58,8 @@ import { ThemeService } from '../utils';
 export class BarChartDemo {
   @ViewChild('barChart') barChartRef!: ElementRef;
   themeService = inject(ThemeService);
+
+  isAndroid = __ANDROID__;
 
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);

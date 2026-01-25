@@ -33,14 +33,14 @@ import { ThemeService } from '../utils';
       </GridLayout>
 
       <!-- Style Selector -->
-      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm">
+      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
         <SegmentedBarItem title="Market"></SegmentedBarItem>
         <SegmentedBarItem title="Budget"></SegmentedBarItem>
         <SegmentedBarItem title="Traffic"></SegmentedBarItem>
       </SegmentedBar>
 
       <!-- Controls -->
-      <GridLayout row="3" columns="*, *, *" class="p-4 pt-0">
+      <GridLayout row="3" columns="*, *, *" [ngClass]="{ 'p-4 pt-0': !isAndroid, 'm-4 h-10': isAndroid }">
         <Button col="0" text="Spin" (tap)="spinChart()" class="bg-orange-500 text-white rounded-xl m-1 text-sm"></Button>
         <Button col="1" text="Donut" (tap)="toggleDonut()" class="bg-pink-500 text-white rounded-xl m-1 text-sm"></Button>
         <Button col="2" text="Animate" (tap)="animateChart()" class="bg-purple-500 text-white rounded-xl m-1 text-sm"></Button>
@@ -54,6 +54,8 @@ import { ThemeService } from '../utils';
 export class PieChartDemo {
   @ViewChild('pieChart') pieChartRef!: ElementRef;
   themeService = inject(ThemeService);
+
+  isAndroid = __ANDROID__;
 
   // Theme-reactive colors
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);

@@ -19,14 +19,14 @@
   </GridLayout>
 
   <!-- Style Selector -->
-  <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm">
+  <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
     <SegmentedBarItem title="Sales"></SegmentedBarItem>
     <SegmentedBarItem title="Stocks"></SegmentedBarItem>
     <SegmentedBarItem title="Weather"></SegmentedBarItem>
   </SegmentedBar>
 
   <!-- Controls -->
-  <GridLayout row="3" columns="*, *, *" class="p-4 pt-0">
+  <GridLayout row="3" columns="*, *, *" [ngClass]="{ 'p-4 pt-0': !isAndroid, 'm-4 h-10': isAndroid }">
     <button col="0" text="Animate" (tap)="animateChart()" class="bg-blue-500 text-white rounded-md m-1 text-sm"></button>
     <button col="1" text="Highlight" (tap)="highlightRandom()" class="bg-purple-500 text-white rounded-md m-1 text-sm"></button>
     <button col="2" text="Reset" (tap)="resetChart()" class="bg-slate-500 text-white rounded-md m-1 text-sm"></button>
