@@ -33,7 +33,7 @@ import { ThemeService } from '../utils';
       </GridLayout>
 
       <!-- Style Selector -->
-      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
+      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [class.text-white]="isAndroid">
         <SegmentedBarItem title="GDP"></SegmentedBarItem>
         <SegmentedBarItem title="Products"></SegmentedBarItem>
         <SegmentedBarItem title="Social"></SegmentedBarItem>
@@ -57,8 +57,10 @@ export class BubbleChartDemo {
 
   isAndroid = __ANDROID__;
 
-  // Theme-reactive colors
+  // Theme-reactive colors for SegmentedBar and other UI elements
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
+  segmentedBarBgColor = computed(() => (__APPLE__ ? null : 'transparent'));
+  segmentedBarSelectedBgColor = computed(() => (__APPLE__ ? null : this.themeService.colors().bgSelectedSegmentBar));
   valueTextColor = computed(() => (this.themeService.isDarkMode() ? '#FFFFFF' : '#374151'));
   chartBgColor = computed(() => this.themeService.colors().bgChart);
   currentStyle = signal<'gdp' | 'products' | 'social'>('gdp');

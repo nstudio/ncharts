@@ -45,6 +45,8 @@ export class ThemeService implements OnDestroy {
       bgSecondary: dark ? '#1e293b' : '#ffffff', // slate-800 / white
       bgTertiary: dark ? '#334155' : '#f1f5f9', // slate-700 / slate-100,
       bgChart: dark ? 'black' : 'white',
+      bgSelectedSegmentBar: dark ? 'black' : 'white',
+      bgSegmentBar: dark ? '#999' : '#999',
 
       // Border colors
       border: dark ? '#334155' : '#e2e8f0', // slate-700 / slate-200

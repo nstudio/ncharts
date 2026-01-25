@@ -4,16 +4,11 @@ import { ThemeService } from './utils';
 
 @Component({
   selector: 'ns-app',
-  template: `
-    <GridLayout androidOverflowEdge="bottom">
-      <page-router-outlet></page-router-outlet>
-    </GridLayout>
-  `,
+  templateUrl: './app.html',
   imports: [PageRouterOutlet],
   schemas: [NO_ERRORS_SCHEMA],
 })
 export class App {
-  // Inject ThemeService at app root to initialize system appearance listener
   private themeService = inject(ThemeService);
 
   constructor() {

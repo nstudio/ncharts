@@ -33,7 +33,7 @@ import { ThemeService } from '../utils';
       </GridLayout>
 
       <!-- Style Selector -->
-      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
+      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [class.text-white]="isAndroid">
         <SegmentedBarItem title="Market"></SegmentedBarItem>
         <SegmentedBarItem title="Budget"></SegmentedBarItem>
         <SegmentedBarItem title="Traffic"></SegmentedBarItem>
@@ -57,8 +57,10 @@ export class PieChartDemo {
 
   isAndroid = __ANDROID__;
 
-  // Theme-reactive colors
+  // Theme-reactive colors for SegmentedBar and other UI elements
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
+  segmentedBarBgColor = computed(() => (__APPLE__ ? null : 'transparent'));
+  segmentedBarSelectedBgColor = computed(() => (__APPLE__ ? null : this.themeService.colors().bgSelectedSegmentBar));
   chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'market' | 'budget' | 'traffic'>('market');

@@ -22,6 +22,8 @@ export class LineChartDemo {
 
   // Theme-reactive colors for SegmentedBar and other UI elements
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
+  segmentedBarBgColor = computed(() => (__APPLE__ ? null : 'transparent'));
+  segmentedBarSelectedBgColor = computed(() => (__APPLE__ ? null : this.themeService.colors().bgSelectedSegmentBar));
   chartBgColor = computed(() => this.themeService.colors().bgChart);
 
   currentStyle = signal<'sales' | 'stocks' | 'weather'>('sales');

@@ -1,5 +1,6 @@
-<ActionBar flat="true" title="Line Charts" class="bg-slate-50 dark:bg-slate-900">
+<ActionBar flat="true" class="bg-slate-50 dark:bg-slate-900">
   <NavigationButton text="" android.systemIcon="ic_menu_back" (tap)="goBack()"></NavigationButton>
+  <label text="Line Charts" class="text-lg font-bold text-slate-700 dark:text-slate-100"></label>
 </ActionBar>
 <GridLayout rows="auto, *, auto, auto, auto" class="bg-slate-50 dark:bg-slate-900">
   <!-- Selected Value Display -->
@@ -19,7 +20,7 @@
   </GridLayout>
 
   <!-- Style Selector -->
-  <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" class="m-4 text-sm" [class.h-8]="isAndroid">
+  <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [class.text-white]="isAndroid">
     <SegmentedBarItem title="Sales"></SegmentedBarItem>
     <SegmentedBarItem title="Stocks"></SegmentedBarItem>
     <SegmentedBarItem title="Weather"></SegmentedBarItem>
