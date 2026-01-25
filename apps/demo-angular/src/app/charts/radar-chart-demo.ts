@@ -7,7 +7,7 @@ import { NativeScriptCommonModule, RouterExtensions } from '@nativescript/angula
 import { RadarChartDirective } from '@nstudio/ncharts/angular';
 import type { RadarChartData, ChartAnimation, LegendConfig, XAxisConfig, ChartSelectData, ChartSelectEvent } from '@nstudio/ncharts';
 import { ThemeService } from '../utils';
-
+import { Page } from '@nativescript/core';
 @Component({
   selector: 'RadarChartDemo',
   template: `
@@ -103,7 +103,12 @@ export class RadarChartDemo {
     textColor: '#6B7280',
   };
 
-  constructor(private routerExtensions: RouterExtensions) {}
+  page = inject(Page);
+  constructor(private routerExtensions: RouterExtensions) {
+    if (__ANDROID__) {
+      this.page.backgroundColor = this.themeService.colors().bgPrimary;
+    }
+  }
 
   onStyleIndexChange(event: any): void {
     const index = event.value ?? event.object?.selectedIndex ?? 0;

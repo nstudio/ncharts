@@ -165,6 +165,9 @@ export class ChartsHomeDemo {
   constructor(private routerExtensions: RouterExtensions) {
     // @ts-ignore
     this.page.androidOverflowEdge = 'bottom';
+    if (__ANDROID__) {
+      this.page.backgroundColor = this.themeService.colors().bgPrimary;
+    }
   }
 
   goBack(): void {

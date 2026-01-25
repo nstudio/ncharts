@@ -7,7 +7,7 @@ import { NativeScriptCommonModule, RouterExtensions } from '@nativescript/angula
 import { LineChartDirective, BarChartDirective, PieChartDirective, ScatterChartDirective, BubbleChartDirective, CandleStickChartDirective, RadarChartDirective } from '@nstudio/ncharts/angular';
 import type { LineChartData, BarChartData, PieChartData, ScatterChartData, BubbleChartData, CandleChartData, RadarChartData, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual } from '@nstudio/ncharts';
 import { ThemeService } from '../utils';
-
+import { Page } from '@nativescript/core';
 @Component({
   selector: 'CombinedChartsDemo',
   template: `
@@ -539,7 +539,13 @@ export class CombinedChartsDemo {
     ],
   };
 
-  constructor(private routerExtensions: RouterExtensions) {}
+  page = inject(Page);
+
+  constructor(private routerExtensions: RouterExtensions) {
+    if (__ANDROID__) {
+      this.page.backgroundColor = this.themeService.colors().bgPrimary;
+    }
+  }
 
   refreshAllCharts(): void {
     this.lineAnimation.set({ durationX: 4500, durationY: 4500, easingX: 'EaseOutQuad' });

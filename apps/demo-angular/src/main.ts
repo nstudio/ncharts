@@ -15,18 +15,7 @@ registerStreamdownElements();
 import { NCharts } from '@nstudio/ncharts';
 // NCharts.debug = true;
 import { registerNchartsElements } from '@nstudio/ncharts/angular';
-import { Application, Utils } from '@nativescript/core';
 registerNchartsElements();
-
-if (__ANDROID__) {
-  Application.android.on(Application.AndroidApplication.activityCreatedEvent, (args) => {
-    Utils.android.enableEdgeToEdge(args.activity, {
-      handleDarkMode(bar, resources) {
-        return false;
-      },
-    });
-  });
-}
 
 runNativeScriptAngularApp({
   appModuleBootstrap: () => {

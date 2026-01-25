@@ -7,7 +7,7 @@ import { NativeScriptCommonModule, RouterExtensions } from '@nativescript/angula
 import { LineChartDirective } from '@nstudio/ncharts/angular';
 import type { LineChartData, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartSelectEvent, ChartSelectData, LineChart } from '@nstudio/ncharts';
 import { ThemeService } from '../utils';
-
+import { Page } from '@nativescript/core';
 @Component({
   selector: 'LineChartDemo',
   templateUrl: 'line-chart-demo.html',
@@ -81,8 +81,13 @@ export class LineChartDemo {
     },
   };
 
+  page = inject(Page);
+
   constructor() {
     console.log('LineChartDemo component constructed');
+    if (__ANDROID__) {
+      this.page.backgroundColor = this.themeService.colors().bgPrimary;
+    }
   }
 
   onStyleIndexChange(event: any): void {
