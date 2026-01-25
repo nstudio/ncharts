@@ -4,7 +4,7 @@
  */
 import { Component, NO_ERRORS_SCHEMA, ChangeDetectionStrategy, inject, computed } from '@angular/core';
 import { NativeScriptCommonModule, NativeScriptRouterModule, RouterExtensions } from '@nativescript/angular';
-import { Utils } from '@nativescript/core';
+import { Utils, Page } from '@nativescript/core';
 import { ThemeService } from '../utils';
 
 interface ChartDemoItem {
@@ -96,6 +96,7 @@ interface ChartDemoItem {
 })
 export class ChartsHomeDemo {
   themeService = inject(ThemeService);
+  page = inject(Page);
 
   // Theme-reactive row background color
   rowBgColor = computed(() => (this.themeService.isDarkMode() ? 'bg-slate-800' : 'bg-slate-100'));
@@ -161,7 +162,10 @@ export class ChartsHomeDemo {
 
   features = ['Native performance', 'Smooth animations', 'Touch interactions', 'Pan & zoom', 'Legends & axes', 'Custom colors', 'Gradient fills', 'Value markers', 'Dark mode', 'Accessibility'];
 
-  constructor(private routerExtensions: RouterExtensions) {}
+  constructor(private routerExtensions: RouterExtensions) {
+    // @ts-ignore
+    this.page.androidOverflowEdge = 'bottom';
+  }
 
   goBack(): void {
     this.routerExtensions.back();

@@ -5,7 +5,7 @@ import { ThemeService } from './utils';
 @Component({
   selector: 'ns-app',
   template: `
-    <GridLayout>
+    <GridLayout androidOverflowEdge="bottom">
       <page-router-outlet></page-router-outlet>
     </GridLayout>
   `,
