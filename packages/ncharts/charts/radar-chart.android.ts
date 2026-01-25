@@ -158,7 +158,11 @@ export class RadarChart extends RadarChartBase {
     if (this.data!.labels && this.data!.labels.length > 0) {
       const xAxis = instance.getXAxis();
       if (xAxis) {
-        const formatter = new com.github.mikephil.charting.formatter.IndexAxisValueFormatter(this.data!.labels);
+        const labels = Array.create('java.lang.String', this.data!.labels.length);
+        for (let i = 0; i < this.data!.labels.length; i++) {
+          labels[i] = this.data!.labels[i];
+        }
+        const formatter = new com.github.mikephil.charting.formatter.IndexAxisValueFormatter(labels);
         xAxis.setValueFormatter(formatter);
       }
     }
