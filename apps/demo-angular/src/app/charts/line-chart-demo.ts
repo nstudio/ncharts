@@ -21,6 +21,7 @@ export class LineChartDemo {
   @ViewChild('lineChart') lineChartRef!: ElementRef;
 
   // Theme-reactive colors for SegmentedBar and other UI elements
+  segmentedBarSelectedTextColor = computed(() => this.themeService.colors().textPrimary);
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
   segmentedBarBgColor = computed(() => (__APPLE__ ? null : 'transparent'));
   segmentedBarSelectedBgColor = computed(() => (__APPLE__ ? null : this.themeService.colors().bgSelectedSegmentBar));

@@ -33,7 +33,7 @@ import { Page } from '@nativescript/core';
       </GridLayout>
 
       <!-- Style Selector -->
-      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [class.text-white]="isAndroid">
+      <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarSelectedTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [color]="segmentedBarTextColor()">
         <SegmentedBarItem title="Skills"></SegmentedBarItem>
         <SegmentedBarItem title="KPIs"></SegmentedBarItem>
         <SegmentedBarItem title="Compare"></SegmentedBarItem>
@@ -58,6 +58,7 @@ export class RadarChartDemo {
   isAndroid = __ANDROID__;
 
   // Theme-reactive colors for SegmentedBar and other UI elements
+  segmentedBarSelectedTextColor = computed(() => this.themeService.colors().textPrimary);
   segmentedBarTextColor = computed(() => this.themeService.colors().textPrimary);
   segmentedBarBgColor = computed(() => (__APPLE__ ? null : 'transparent'));
   segmentedBarSelectedBgColor = computed(() => (__APPLE__ ? null : this.themeService.colors().bgSelectedSegmentBar));

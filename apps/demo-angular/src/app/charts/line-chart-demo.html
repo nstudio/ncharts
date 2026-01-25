@@ -20,7 +20,7 @@
   </GridLayout>
 
   <!-- Style Selector -->
-  <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [class.text-white]="isAndroid">
+  <SegmentedBar row="2" [selectedIndex]="selectedStyleIndex()" (selectedIndexChange)="onStyleIndexChange($event)" [selectedTextColor]="segmentedBarSelectedTextColor()" [selectedBackgroundColor]="segmentedBarSelectedBgColor()" [backgroundColor]="segmentedBarBgColor()" class="m-4 text-sm" [class.h-8]="isAndroid" [color]="segmentedBarTextColor()">
     <SegmentedBarItem title="Sales"></SegmentedBarItem>
     <SegmentedBarItem title="Stocks"></SegmentedBarItem>
     <SegmentedBarItem title="Weather"></SegmentedBarItem>
