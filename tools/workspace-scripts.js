@@ -113,13 +113,6 @@ module.exports = {
     // packages
     // build output is always in dist/packages
     '@nstudio': {
-      // @nstudio/nstreamdown
-      nstreamdown: {
-        build: {
-          script: 'nx run nstreamdown:build.all',
-          description: '@nstudio/nstreamdown: Build',
-        },
-      },
       // @nstudio/ncharts
       ncharts: {
         build: {
@@ -137,10 +130,6 @@ module.exports = {
       description: '_____________  Focus (VS Code supported)  _____________',
     },
     focus: {
-      nstreamdown: {
-        script: 'nx run nstreamdown:focus',
-        description: 'Focus on @nstudio/nstreamdown',
-      },
       ncharts: {
         script: 'nx run ncharts:focus',
         description: 'Focus on @nstudio/ncharts',

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { start, registerElement, NativeScriptProps, ViewAttributes } from 'react-nativescript';
-import { NativeCodeView } from '@nstudio/nstreamdown';
 import { registerNchartsElements } from '@nstudio/ncharts/react';
 import { App } from './components/App';
 
@@ -12,21 +11,6 @@ import { App } from './components/App';
 // - true: all logs;
 // - false: only error logs.
 Object.defineProperty(global, '__DEV__', { value: false });
-
-// To use NativeCodeView within JSX
-interface NativeCodeViewAttrs extends ViewAttributes {
-  code: string;
-  language: string;
-}
-declare global {
-  module JSX {
-    interface IntrinsicElements {
-      nativeCodeView: NativeScriptProps<NativeCodeViewAttrs, NativeCodeView>;
-    }
-  }
-}
-
-registerElement('nativeCodeView', () => <any>NativeCodeView);
 
 // Register chart elements
 registerNchartsElements();

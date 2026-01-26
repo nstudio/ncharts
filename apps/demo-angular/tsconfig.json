@@ -14,8 +14,6 @@
     "paths": {
       "~/*": ["src/*"],
       "@/*": ["src/*"],
-      "@nstudio/nstreamdown": ["../../packages/nstreamdown/index.ios.ts"],
-      "@nstudio/nstreamdown/angular": ["../../packages/nstreamdown/angular/index.ts"],
       "@nstudio/ncharts": ["../../packages/ncharts/index.ios.ts"],
       "@nstudio/ncharts/angular": ["../../packages/ncharts/angular/index.ts"]
     }

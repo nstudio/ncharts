@@ -8,7 +8,7 @@ const path = require('path');
 
 // Resolve to workspace root (two levels up from tools/scripts)
 const rootDir = path.resolve(__dirname, '..', '..');
-const packages = ['nstreamdown', 'ncharts'];
+const packages = ['ncharts'];
 const distPaths = packages.map((pkg) => path.join(rootDir, 'dist', 'packages', pkg));
 const symlinkDir = path.join(rootDir, 'node_modules', '@nstudio');
 const symlinkPaths = packages.map((pkg) => path.join(symlinkDir, pkg));

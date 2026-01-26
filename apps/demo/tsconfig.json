@@ -7,7 +7,6 @@
       "~/*": ["src/*"],
       "@demo/shared": ["../../tools/demo/index.ts"],
       "@nstudio/*": ["../../packages/*"],
-      "@nstudio/nstreamdown": ["../../packages/nstreamdown/index.d.ts"],
       "@nstudio/ncharts": ["../../packages/ncharts/index.d.ts"]
     }
   }
