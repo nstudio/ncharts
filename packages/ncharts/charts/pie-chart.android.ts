@@ -3,6 +3,7 @@
  */
 import { PieChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, PieDataSetConfig, nchartsLog, nchartsError } from '../common';
 import { toAndroidColor } from './utils';
+import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyDescriptionAndroid } from './style-helpers.android';
 
 function applyPieDataSetConfig(dataSet: com.github.mikephil.charting.data.PieDataSet, config: PieDataSetConfig): void {
   if (!dataSet || !config) return;
@@ -66,6 +67,7 @@ export class PieChart extends PieChartBase {
       if (color !== undefined) instance.setBackgroundColor(color);
     }
     if (this.noDataText) instance.setNoDataText(this.noDataText);
+    applyNoDataTextColorAndroid(instance, this.noDataTextColor);
 
     // Set up selection listener
     const owner = new WeakRef(this);
@@ -91,6 +93,10 @@ export class PieChart extends PieChartBase {
       },
     });
     instance.setOnChartValueSelectedListener(this._selectionListener);
+
+    if (this.legend) this._applyLegend(this.legend);
+    if (this.xAxis) this._applyXAxis(this.xAxis);
+    if (this.chartDescription) this._applyDescription(this.chartDescription);
 
     this._applyPieChartConfig();
     if (this.data) this.applyData();
@@ -225,8 +231,14 @@ export class PieChart extends PieChartBase {
     this._native?.invalidate();
   }
 
-  protected _applyLegend(legend: LegendConfig): void {}
-  protected _applyXAxis(xAxis: XAxisConfig): void {}
-  protected _applyDescription(description: ChartDescription): void {}
+  protected _applyLegend(legend: LegendConfig): void {
+    applyLegendAndroid(this._native, legend);
+  }
+  protected _applyXAxis(xAxis: XAxisConfig): void {
+    applyXAxisAndroid(this._native, xAxis);
+  }
+  protected _applyDescription(description: ChartDescription): void {
+    applyDescriptionAndroid(this._native, description);
+  }
   protected _applyMarker(marker: MarkerConfig): void {}
 }

@@ -3,6 +3,7 @@
  */
 import { RadarChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, RadarDataSetConfig, nchartsLog, nchartsError } from '../common';
 import { toUIColor, parseEasingIOS } from './utils';
+import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisIOS, applyDescriptionIOS } from './style-helpers.ios';
 
 @NativeClass()
 class RadarChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
@@ -101,10 +102,16 @@ export class RadarChart extends RadarChartBase {
 
     instance.clearsContextBeforeDrawing = true;
     if (this.noDataText) instance.noDataText = this.noDataText;
+    applyNoDataTextColorIOS(instance, this.noDataTextColor);
 
     // Set up selection delegate
     this._delegate = RadarChartViewDelegateImpl.initWithOwner(this);
     instance.delegate = this._delegate;
+
+    if (this.legend) this._applyLegend(this.legend);
+    if (this.xAxis) this._applyXAxis(this.xAxis);
+    if (this.yAxis) applyYAxisIOS(instance.yAxis, this.yAxis as any);
+    if (this.chartDescription) this._applyDescription(this.chartDescription);
 
     this._applyRadarChartConfig();
     if (this.data) this.applyData();
@@ -238,8 +245,14 @@ export class RadarChart extends RadarChartBase {
     this._native?.setNeedsDisplay();
   }
 
-  protected _applyLegend(legend: LegendConfig): void {}
-  protected _applyXAxis(xAxis: XAxisConfig): void {}
-  protected _applyDescription(description: ChartDescription): void {}
+  protected _applyLegend(legend: LegendConfig): void {
+    applyLegendIOS(this._native, legend);
+  }
+  protected _applyXAxis(xAxis: XAxisConfig): void {
+    applyXAxisIOS(this._native, xAxis);
+  }
+  protected _applyDescription(description: ChartDescription): void {
+    applyDescriptionIOS(this._native, description);
+  }
   protected _applyMarker(marker: MarkerConfig): void {}
 }

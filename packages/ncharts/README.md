@@ -117,6 +117,30 @@ const data = { dataSets: [{ label: 'Sales', values: [{ x: 0, y: 45 }] }] };
 />
 ```
 
+### Dark Background Label Colors
+
+```ts
+const data = {
+  dataSets: [
+    {
+      label: 'Test Data',
+      values: [10, 20, 15, 30],
+      config: {
+        drawValues: true,
+        valueTextColor: '#FFFFFF',
+      },
+    },
+  ],
+};
+
+const legend = { enabled: true, textColor: '#FFFFFF' };
+const xAxis = { enabled: true, textColor: '#FFFFFF' };
+const yAxis = {
+  left: { enabled: true, textColor: '#FFFFFF' },
+  right: { enabled: false },
+};
+```
+
 ## Credits
 
 - iOS: [DGCharts](https://github.com/ChartsOrg/Charts) by Daniel Gindi

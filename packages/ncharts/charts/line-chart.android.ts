@@ -3,6 +3,7 @@
  */
 import { LineChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, LineDataSetConfig, nchartsLog, nchartsError } from '../common';
 import { toAndroidColor } from './utils';
+import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
 
 function applyLineDataSetConfig(dataSet: com.github.mikephil.charting.data.LineDataSet, config: LineDataSetConfig): void {
   if (!dataSet || !config) return;
@@ -88,6 +89,7 @@ export class LineChart extends LineChartBase {
       if (color !== undefined) instance.setBackgroundColor(color);
     }
     if (this.noDataText) instance.setNoDataText(this.noDataText);
+    applyNoDataTextColorAndroid(instance, this.noDataTextColor);
 
     // Set up selection listener
     const owner = new WeakRef(this);
@@ -113,6 +115,11 @@ export class LineChart extends LineChartBase {
       },
     });
     instance.setOnChartValueSelectedListener(this._selectionListener);
+
+    if (this.legend) this._applyLegend(this.legend);
+    if (this.xAxis) this._applyXAxis(this.xAxis);
+    if (this.yAxis) this._applyYAxis(this.yAxis);
+    if (this.chartDescription) this._applyDescription(this.chartDescription);
 
     if (this.data) {
       this.applyData();
@@ -201,19 +208,19 @@ export class LineChart extends LineChartBase {
   }
 
   protected _applyLegend(legend: LegendConfig): void {
-    // TODO: implement
+    applyLegendAndroid(this._native, legend);
   }
 
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    // TODO: implement
+    applyXAxisAndroid(this._native, xAxis);
   }
 
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    // TODO: implement
+    applyYAxisDualAndroid(this._native, yAxis);
   }
 
   protected _applyDescription(description: ChartDescription): void {
-    // TODO: implement
+    applyDescriptionAndroid(this._native, description);
   }
 
   protected _applyMarker(marker: MarkerConfig): void {

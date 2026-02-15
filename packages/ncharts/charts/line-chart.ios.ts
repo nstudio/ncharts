@@ -3,6 +3,7 @@
  */
 import { LineChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, LineDataSetConfig, nchartsLog, nchartsError } from '../common';
 import { toUIColor, parseEasingIOS, parseLineChartModeIOS } from './utils';
+import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS } from './style-helpers.ios';
 
 function applyLineDataSetConfig(dataSet: LineChartDataSet, config: LineDataSetConfig): void {
   if (!dataSet || !config) return;
@@ -115,10 +116,16 @@ export class LineChart extends LineChartBase {
 
     instance.clearsContextBeforeDrawing = true;
     if (this.noDataText) instance.noDataText = this.noDataText;
+    applyNoDataTextColorIOS(instance, this.noDataTextColor);
 
     // Set up selection delegate
     this._delegate = ChartViewDelegateImpl.initWithOwner(this);
     instance.delegate = this._delegate;
+
+    if (this.legend) this._applyLegend(this.legend);
+    if (this.xAxis) this._applyXAxis(this.xAxis);
+    if (this.yAxis) this._applyYAxis(this.yAxis);
+    if (this.chartDescription) this._applyDescription(this.chartDescription);
 
     if (this.data) {
       this.applyData();
@@ -241,19 +248,19 @@ export class LineChart extends LineChartBase {
   }
 
   protected _applyLegend(legend: LegendConfig): void {
-    // TODO: implement
+    applyLegendIOS(this._native, legend);
   }
 
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    // TODO: implement
+    applyXAxisIOS(this._native, xAxis);
   }
 
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    // TODO: implement
+    applyYAxisDualIOS(this._native, yAxis);
   }
 
   protected _applyDescription(description: ChartDescription): void {
-    // TODO: implement
+    applyDescriptionIOS(this._native, description);
   }
 
   protected _applyMarker(marker: MarkerConfig): void {

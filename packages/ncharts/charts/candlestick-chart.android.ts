@@ -3,6 +3,7 @@
  */
 import { CandleStickChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, CandleDataSetConfig, nchartsLog, nchartsError } from '../common';
 import { toAndroidColor } from './utils';
+import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
 
 function applyCandleDataSetConfig(dataSet: com.github.mikephil.charting.data.CandleDataSet, config: CandleDataSetConfig): void {
   if (!dataSet || !config) return;
@@ -95,6 +96,7 @@ export class CandleStickChart extends CandleStickChartBase {
       if (color !== undefined) instance.setBackgroundColor(color);
     }
     if (this.noDataText) instance.setNoDataText(this.noDataText);
+    applyNoDataTextColorAndroid(instance, this.noDataTextColor);
 
     // Set up selection listener
     const owner = new WeakRef(this);
@@ -120,6 +122,11 @@ export class CandleStickChart extends CandleStickChartBase {
       },
     });
     instance.setOnChartValueSelectedListener(this._selectionListener);
+
+    if (this.legend) this._applyLegend(this.legend);
+    if (this.xAxis) this._applyXAxis(this.xAxis);
+    if (this.yAxis) this._applyYAxis(this.yAxis);
+    if (this.chartDescription) this._applyDescription(this.chartDescription);
 
     if (this.data) this.applyData();
   }
@@ -200,10 +207,18 @@ export class CandleStickChart extends CandleStickChartBase {
     this._native?.invalidate();
   }
 
-  protected _applyLegend(legend: LegendConfig): void {}
-  protected _applyXAxis(xAxis: XAxisConfig): void {}
-  protected _applyYAxis(yAxis: YAxisConfigDual): void {}
-  protected _applyDescription(description: ChartDescription): void {}
+  protected _applyLegend(legend: LegendConfig): void {
+    applyLegendAndroid(this._native, legend);
+  }
+  protected _applyXAxis(xAxis: XAxisConfig): void {
+    applyXAxisAndroid(this._native, xAxis);
+  }
+  protected _applyYAxis(yAxis: YAxisConfigDual): void {
+    applyYAxisDualAndroid(this._native, yAxis);
+  }
+  protected _applyDescription(description: ChartDescription): void {
+    applyDescriptionAndroid(this._native, description);
+  }
   protected _applyMarker(marker: MarkerConfig): void {}
 
   protected _moveViewToX(xValue: number): void {

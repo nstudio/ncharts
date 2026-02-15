@@ -3,6 +3,7 @@
  */
 import { BubbleChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BubbleDataSetConfig, nchartsLog, nchartsError } from '../common';
 import { toUIColor, parseEasingIOS } from './utils';
+import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS } from './style-helpers.ios';
 
 @NativeClass()
 class BubbleChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
@@ -103,10 +104,16 @@ export class BubbleChart extends BubbleChartBase {
 
     instance.clearsContextBeforeDrawing = true;
     if (this.noDataText) instance.noDataText = this.noDataText;
+    applyNoDataTextColorIOS(instance, this.noDataTextColor);
 
     // Set up selection delegate
     this._delegate = BubbleChartViewDelegateImpl.initWithOwner(this);
     instance.delegate = this._delegate;
+
+    if (this.legend) this._applyLegend(this.legend);
+    if (this.xAxis) this._applyXAxis(this.xAxis);
+    if (this.yAxis) this._applyYAxis(this.yAxis);
+    if (this.chartDescription) this._applyDescription(this.chartDescription);
 
     if (this.data) this.applyData();
   }
@@ -214,10 +221,18 @@ export class BubbleChart extends BubbleChartBase {
     this._native?.setNeedsDisplay();
   }
 
-  protected _applyLegend(legend: LegendConfig): void {}
-  protected _applyXAxis(xAxis: XAxisConfig): void {}
-  protected _applyYAxis(yAxis: YAxisConfigDual): void {}
-  protected _applyDescription(description: ChartDescription): void {}
+  protected _applyLegend(legend: LegendConfig): void {
+    applyLegendIOS(this._native, legend);
+  }
+  protected _applyXAxis(xAxis: XAxisConfig): void {
+    applyXAxisIOS(this._native, xAxis);
+  }
+  protected _applyYAxis(yAxis: YAxisConfigDual): void {
+    applyYAxisDualIOS(this._native, yAxis);
+  }
+  protected _applyDescription(description: ChartDescription): void {
+    applyDescriptionIOS(this._native, description);
+  }
   protected _applyMarker(marker: MarkerConfig): void {}
 
   protected _moveViewToX(xValue: number): void {
