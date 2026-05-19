@@ -101,7 +101,74 @@ export function applyLegendAndroid(nativeChart: any, legend: LegendConfig): void
   }
 }
 
-export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig, retainedChartObjects: Array<any>): void {
+interface AxisBaseLike {
+  valueFormatter?: 'largeValue' | 'percent' | 'suffix' | 'date' | 'labelByXValue' | string | string[];
+  valueFormatterPattern?: string;
+  valueFormatterTransformExpression?: string;
+  valueFormatterLabels?: Array<{ x: number; label: string }>;
+}
+
+/**
+ * Resolve a `valueFormatter` config value to a MPAndroidChart axis formatter.
+ *
+ * Supports:
+ * - `string[]`           — `IndexAxisValueFormatter` (category labels by index)
+ * - `'largeValue'`       — built-in `LargeValueFormatter` (k/M/B suffix)
+ * - `'percent'`          — built-in `PercentFormatter`
+ * - `'date'`             — formats epoch milliseconds with `valueFormatterPattern` via `SimpleDateFormat`
+ * - `'labelByXValue'`    — sparse lookup using `valueFormatterLabels`
+ *
+ * Returns `undefined` for unrecognized values so the platform default applies.
+ */
+export function resolveAxisValueFormatterAndroid(config: AxisBaseLike): any | undefined {
+  const { valueFormatter, valueFormatterPattern, valueFormatterLabels } = config;
+  if (valueFormatter === undefined) return undefined;
+
+  if (Array.isArray(valueFormatter)) {
+    return new com.github.mikephil.charting.formatter.IndexAxisValueFormatter(valueFormatter as any);
+  }
+
+  switch (valueFormatter) {
+    case 'largeValue':
+      return new com.github.mikephil.charting.formatter.LargeValueFormatter();
+    case 'percent':
+      return new com.github.mikephil.charting.formatter.PercentFormatter();
+    case 'date': {
+      const pattern = valueFormatterPattern ?? 'MMM d, yyyy';
+      const dateFormat = new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault());
+      return new com.github.mikephil.charting.formatter.ValueFormatter({
+        getFormattedValue(value: number): string {
+          return dateFormat.format(new java.util.Date(value));
+        },
+        getAxisLabel(value: number): string {
+          return dateFormat.format(new java.util.Date(value));
+        },
+      });
+    }
+    case 'labelByXValue': {
+      const lookup = new Map<number, string>();
+      (valueFormatterLabels ?? []).forEach((entry) => lookup.set(entry.x, entry.label));
+      return new com.github.mikephil.charting.formatter.ValueFormatter({
+        getFormattedValue(value: number): string {
+          return lookup.get(value) ?? `${value}`;
+        },
+        getAxisLabel(value: number): string {
+          return lookup.get(value) ?? `${value}`;
+        },
+      });
+    }
+    default:
+      return undefined;
+  }
+}
+
+function applyAxisValueFormatterAndroid(nativeAxis: any, config: AxisBaseLike): void {
+  if (config.valueFormatter === undefined) return;
+  const formatter = resolveAxisValueFormatterAndroid(config);
+  if (formatter) nativeAxis.setValueFormatter(formatter);
+}
+
+export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig, retainedChartObjects?: Array<any>): void {
   if (!nativeChart || !xAxis) return;
 
   const nativeXAxis = nativeChart.getXAxis?.();
@@ -111,6 +178,7 @@ export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig, retained
   if (xAxis.drawGridLines !== undefined) nativeXAxis.setDrawGridLines(xAxis.drawGridLines);
   if (xAxis.drawAxisLine !== undefined) nativeXAxis.setDrawAxisLine(xAxis.drawAxisLine);
   if (xAxis.drawLabels !== undefined) nativeXAxis.setDrawLabels(xAxis.drawLabels);
+  applyAxisValueFormatterAndroid(nativeXAxis, xAxis as AxisBaseLike);
   if (xAxis.textColor) {
     const textColor = toAndroidColor(xAxis.textColor);
     if (textColor !== undefined) nativeXAxis.setTextColor(textColor);
@@ -156,11 +224,11 @@ export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig, retained
   if (Array.isArray(xAxis.valueFormatter)) {
     const formatter = new NSCustomLabelsArrayFormatter(xAxis.valueFormatter);
     nativeXAxis.setValueFormatter(formatter);
-    retainedChartObjects.push(formatter);
+    retainedChartObjects?.push(formatter);
   } else if (xAxis.valueFormatter === 'date') {
     const formatter = NSDateAxisValueFormatter.initWithPattern(xAxis.valueFormatterPattern, xAxis.valueFormatterTransformExpression);
     nativeXAxis.setValueFormatter(formatter);
-    retainedChartObjects.push(formatter);
+    retainedChartObjects?.push(formatter);
   }
 }
 
@@ -171,6 +239,7 @@ export function applyYAxisAndroid(axis: any, retainedChartObjects: Array<any>, c
   if (config.drawGridLines !== undefined) axis.setDrawGridLines(config.drawGridLines);
   if (config.drawAxisLine !== undefined) axis.setDrawAxisLine(config.drawAxisLine);
   if (config.drawLabels !== undefined) axis.setDrawLabels(config.drawLabels);
+  applyAxisValueFormatterAndroid(axis, config as AxisBaseLike);
   if (config.textColor) {
     const textColor = toAndroidColor(config.textColor);
     if (textColor !== undefined) axis.setTextColor(textColor);

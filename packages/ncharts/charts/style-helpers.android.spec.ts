@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
+import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid, resolveAxisValueFormatterAndroid } from './style-helpers.android';
 
 vi.mock('@nativescript/core', () => {
   class MockColor {
@@ -149,6 +149,144 @@ describe('style-helpers Android', () => {
     expect(nativeXAxis.setTextSize).toHaveBeenCalledWith(12);
     expect(nativeXAxis.setPosition).toHaveBeenCalledWith('TOP_INSIDE');
     expect(nativeXAxis.setLabelCount).toHaveBeenCalledWith(5, true);
+  });
+
+  it('applies a string[] x-axis valueFormatter as an IndexAxisValueFormatter', () => {
+    const indexFormatterInstances: Array<{ labels: unknown }> = [];
+    (globalThis as any).com.github.mikephil.charting.formatter = {
+      IndexAxisValueFormatter: class {
+        public labels: unknown;
+        constructor(labels: unknown) {
+          this.labels = labels;
+          indexFormatterInstances.push(this);
+        }
+      },
+    };
+
+    const nativeXAxis: any = {
+      setEnabled: vi.fn(),
+      setDrawGridLines: vi.fn(),
+      setDrawAxisLine: vi.fn(),
+      setDrawLabels: vi.fn(),
+      setValueFormatter: vi.fn(),
+    };
+    const nativeChart: any = { getXAxis: () => nativeXAxis };
+
+    applyXAxisAndroid(nativeChart, {
+      valueFormatter: ['Personal Injury Risk', 'Line of Fire', 'Work Practices'],
+    });
+
+    expect(nativeXAxis.setValueFormatter).toHaveBeenCalledTimes(1);
+    const formatter = nativeXAxis.setValueFormatter.mock.calls[0][0];
+    expect(formatter).toBe(indexFormatterInstances[0]);
+    expect(formatter.labels).toEqual(['Personal Injury Risk', 'Line of Fire', 'Work Practices']);
+  });
+
+  it('resolveAxisValueFormatterAndroid returns undefined for missing/unknown formatter', () => {
+    (globalThis as any).com.github.mikephil.charting.formatter = {
+      IndexAxisValueFormatter: class {},
+    };
+
+    expect(resolveAxisValueFormatterAndroid({})).toBeUndefined();
+    expect(resolveAxisValueFormatterAndroid({ valueFormatter: 'unknown' as any })).toBeUndefined();
+    expect(resolveAxisValueFormatterAndroid({ valueFormatter: ['a'] })).not.toBeUndefined();
+  });
+
+  it("resolves 'largeValue' to MPAndroidChart's LargeValueFormatter", () => {
+    const ctorCalls: Array<string> = [];
+    (globalThis as any).com.github.mikephil.charting.formatter = {
+      LargeValueFormatter: class {
+        constructor() {
+          ctorCalls.push('largeValue');
+        }
+      },
+    };
+
+    const formatter = resolveAxisValueFormatterAndroid({ valueFormatter: 'largeValue' });
+    expect(formatter).toBeInstanceOf((globalThis as any).com.github.mikephil.charting.formatter.LargeValueFormatter);
+    expect(ctorCalls).toEqual(['largeValue']);
+  });
+
+  it("resolves 'percent' to MPAndroidChart's PercentFormatter", () => {
+    const ctorCalls: Array<string> = [];
+    (globalThis as any).com.github.mikephil.charting.formatter = {
+      PercentFormatter: class {
+        constructor() {
+          ctorCalls.push('percent');
+        }
+      },
+    };
+
+    const formatter = resolveAxisValueFormatterAndroid({ valueFormatter: 'percent' });
+    expect(formatter).toBeInstanceOf((globalThis as any).com.github.mikephil.charting.formatter.PercentFormatter);
+    expect(ctorCalls).toEqual(['percent']);
+  });
+
+  it("resolves 'date' to a ValueFormatter that delegates to SimpleDateFormat", () => {
+    let lastPattern = '';
+
+    (globalThis as any).java = {
+      text: {
+        SimpleDateFormat: class {
+          constructor(pattern: string) {
+            lastPattern = pattern;
+          }
+          format(date: { time: number }) {
+            return `[${date.time}]`;
+          }
+        },
+      },
+      util: {
+        Date: class {
+          public time: number;
+          constructor(time: number) {
+            this.time = time;
+          }
+        },
+        Locale: { getDefault: () => 'en-US' },
+      },
+    };
+
+    (globalThis as any).com.github.mikephil.charting.formatter = {
+      ValueFormatter: class {
+        public impl: any;
+        constructor(impl: any) {
+          this.impl = impl;
+        }
+      },
+    };
+
+    const formatter = resolveAxisValueFormatterAndroid({
+      valueFormatter: 'date',
+      valueFormatterPattern: 'yyyy-MM-dd',
+    });
+    expect(lastPattern).toBe('yyyy-MM-dd');
+
+    const result = formatter.impl.getFormattedValue(1_700_000_000_000);
+    expect(result).toBe('[1700000000000]');
+  });
+
+  it("resolves 'labelByXValue' with sparse valueFormatterLabels", () => {
+    (globalThis as any).com.github.mikephil.charting.formatter = {
+      ValueFormatter: class {
+        public impl: any;
+        constructor(impl: any) {
+          this.impl = impl;
+        }
+      },
+    };
+
+    const formatter = resolveAxisValueFormatterAndroid({
+      valueFormatter: 'labelByXValue',
+      valueFormatterLabels: [
+        { x: 0, label: 'Start' },
+        { x: 10, label: 'End' },
+      ],
+    });
+
+    expect(formatter.impl.getAxisLabel(0)).toBe('Start');
+    expect(formatter.impl.getAxisLabel(10)).toBe('End');
+    expect(formatter.impl.getAxisLabel(5)).toBe('5');
   });
 
   it('applies dual y-axis styling including zero line and position mapping', () => {

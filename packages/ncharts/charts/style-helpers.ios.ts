@@ -99,7 +99,84 @@ export function applyLegendIOS(nativeChart: any, legend: LegendConfig): void {
   }
 }
 
-export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig, retainedChartObjects: Array<any>): void {
+interface AxisBaseLike {
+  valueFormatter?: 'largeValue' | 'percent' | 'suffix' | 'date' | 'labelByXValue' | string | string[];
+  valueFormatterPattern?: string;
+  valueFormatterTransformExpression?: string;
+  valueFormatterLabels?: Array<{ x: number; label: string }>;
+}
+
+/**
+ * Resolve a `valueFormatter` config value to an iOS Charts axis value formatter.
+ *
+ * Supports:
+ * - `string[]`           — `ChartIndexAxisValueFormatter` (category labels by index)
+ * - `'largeValue'`       — k/M/B suffix formatter via `ChartDefaultAxisValueFormatter` block
+ * - `'percent'`          — value-as-percent via `NSNumberFormatter` (`numberStyle = .percent`)
+ * - `'date'`             — formats epoch seconds with `valueFormatterPattern` via `NSDateFormatter`
+ * - `'labelByXValue'`    — sparse lookup using `valueFormatterLabels`
+ *
+ * Returns `undefined` for unrecognized values so the platform default applies.
+ */
+export function resolveAxisValueFormatterIOS(config: AxisBaseLike): any | undefined {
+  const { valueFormatter, valueFormatterPattern, valueFormatterLabels } = config;
+  if (valueFormatter === undefined) return undefined;
+
+  if (Array.isArray(valueFormatter)) {
+    return ChartIndexAxisValueFormatter.alloc().initWithValues(valueFormatter as any);
+  }
+
+  switch (valueFormatter) {
+    case 'largeValue':
+      return ChartDefaultAxisValueFormatter.alloc().initWithBlock((value: number) => formatLargeValue(value));
+    case 'percent': {
+      const numberFormatter = NSNumberFormatter.alloc().init();
+      numberFormatter.numberStyle = 3; // NSNumberFormatterPercentStyle
+      numberFormatter.maximumFractionDigits = 1;
+      return ChartDefaultAxisValueFormatter.alloc().initWithBlock((value: number) => {
+        const formatted = numberFormatter.stringFromNumber(NSNumber.numberWithDouble(value / 100));
+        return formatted ?? `${value}%`;
+      });
+    }
+    case 'date': {
+      const dateFormatter = NSDateFormatter.alloc().init();
+      dateFormatter.dateFormat = valueFormatterPattern ?? 'MMM d, yyyy';
+      return ChartDefaultAxisValueFormatter.alloc().initWithBlock((value: number) => {
+        const date = NSDate.dateWithTimeIntervalSince1970(value);
+        return dateFormatter.stringFromDate(date as any);
+      });
+    }
+    case 'labelByXValue': {
+      const lookup = new Map<number, string>();
+      (valueFormatterLabels ?? []).forEach((entry) => lookup.set(entry.x, entry.label));
+      return ChartDefaultAxisValueFormatter.alloc().initWithBlock((value: number) => {
+        return lookup.get(value) ?? `${value}`;
+      });
+    }
+    default:
+      return undefined;
+  }
+}
+
+function applyAxisValueFormatterIOS(nativeAxis: any, config: AxisBaseLike): void {
+  if (config.valueFormatter === undefined) return;
+  const formatter = resolveAxisValueFormatterIOS(config);
+  if (formatter) nativeAxis.valueFormatter = formatter;
+}
+
+function formatLargeValue(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `${trimFractional(value / 1_000_000_000)}B`;
+  if (abs >= 1_000_000) return `${trimFractional(value / 1_000_000)}M`;
+  if (abs >= 1_000) return `${trimFractional(value / 1_000)}K`;
+  return `${value}`;
+}
+
+function trimFractional(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
+
+export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig, retainedChartObjects?: Array<any>): void {
   if (!nativeChart || !xAxis) return;
 
   const nativeXAxis = nativeChart.xAxis;
@@ -109,6 +186,7 @@ export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig, retainedChar
   if (xAxis.drawGridLines !== undefined) nativeXAxis.drawGridLinesEnabled = xAxis.drawGridLines;
   if (xAxis.drawAxisLine !== undefined) nativeXAxis.drawAxisLineEnabled = xAxis.drawAxisLine;
   if (xAxis.drawLabels !== undefined) nativeXAxis.drawLabelsEnabled = xAxis.drawLabels;
+  applyAxisValueFormatterIOS(nativeXAxis, xAxis as AxisBaseLike);
   if (xAxis.textColor) {
     const textColor = toUIColor(xAxis.textColor);
     if (textColor) nativeXAxis.labelTextColor = textColor;
@@ -159,11 +237,11 @@ export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig, retainedChar
   if (Array.isArray(xAxis.valueFormatter)) {
     const formatter = NSCustomLabelsArrayAxisValueFormatter.initWithLabels(xAxis.valueFormatter);
     nativeXAxis.valueFormatter = formatter;
-    retainedChartObjects.push(formatter);
+    retainedChartObjects?.push(formatter);
   } else if (xAxis.valueFormatter === 'date') {
     const formatter = NSDateAxisValueFormatter.initWithPattern(xAxis.valueFormatterPattern, xAxis.valueFormatterTransformExpression);
     nativeXAxis.valueFormatter = formatter;
-    retainedChartObjects.push(formatter);
+    retainedChartObjects?.push(formatter);
   }
 }
 
@@ -174,6 +252,7 @@ export function applyYAxisIOS(axis: any, retainedChartObjects: Array<any>, confi
   if (config.drawGridLines !== undefined) axis.drawGridLinesEnabled = config.drawGridLines;
   if (config.drawAxisLine !== undefined) axis.drawAxisLineEnabled = config.drawAxisLine;
   if (config.drawLabels !== undefined) axis.drawLabelsEnabled = config.drawLabels;
+  applyAxisValueFormatterIOS(axis, config as AxisBaseLike);
   if (config.textColor) {
     const textColor = toUIColor(config.textColor);
     if (textColor) axis.labelTextColor = textColor;
@@ -251,7 +330,7 @@ export function applyYAxisIOS(axis: any, retainedChartObjects: Array<any>, confi
         ll.lineDashLengths = NSArray.arrayWithArray(llCfg.lineDashLengths);
         if (llCfg.lineDashPhase !== undefined) ll.lineDashPhase = llCfg.lineDashPhase;
       } else {
-        ll.lineDashLengths = null;
+        ll.lineDashLengths = null as any;
         ll.lineDashPhase = 0;
       }
 
@@ -307,7 +386,7 @@ export function applyMarkerIOS(chart: ChartViewBase, cfg: MarkerConfig, retained
   if (!chart) return;
 
   if (cfg.enabled !== true) {
-    chart.marker = null;
+    chart.marker = null as any;
     return;
   }
 

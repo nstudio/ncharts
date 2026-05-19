@@ -242,10 +242,12 @@ export interface AxisBase {
   centerAxisLabels?: boolean;
   /** Value formatter type */
   valueFormatter?: 'largeValue' | 'percent' | 'suffix' | 'date' | 'labelByXValue' | string | string[];
-  /** Value formatter pattern (for date) */
+  /** Value formatter pattern (for `valueFormatter: 'date'`); platform-specific date pattern, e.g. `'MMM dd'`. */
   valueFormatterPattern?: string;
-  /** Optional JS function expression (y:number) => number applied before value formatting */
+  /** Optional JS function expression (y:number) => number applied before value formatting. */
   valueFormatterTransformExpression?: string;
+  /** Mapped labels for `valueFormatter: 'labelByXValue'`; if a label is missing for a value, the raw value is shown. */
+  valueFormatterLabels?: Array<{ x: number; label: string }>;
   /** Label rotation angle in degrees */
   labelRotationAngle?: number;
   /** Avoid first label clipping */
