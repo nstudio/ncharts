@@ -77,15 +77,19 @@ describe('style-helpers iOS', () => {
       setLabelCountForce: vi.fn(),
     };
     const nativeChart: any = { xAxis: nativeXAxis };
-
-    applyXAxisIOS(nativeChart, {
-      enabled: true,
-      textColor: '#FFFFFF',
-      textSize: 12,
-      position: 'TOP_INSIDE',
-      labelCount: 6,
-      labelCountForce: true,
-    });
+    const retainedChartObjects: any[] = [];
+    applyXAxisIOS(
+      nativeChart,
+      {
+        enabled: true,
+        textColor: '#FFFFFF',
+        textSize: 12,
+        position: 'TOP_INSIDE',
+        labelCount: 6,
+        labelCountForce: true,
+      },
+      retainedChartObjects,
+    );
 
     expect(nativeXAxis.enabled).toBe(true);
     expect(nativeXAxis.labelTextColor).toEqual({ mockUIColor: true });
@@ -104,19 +108,23 @@ describe('style-helpers iOS', () => {
       setLabelCountForce: vi.fn(),
     };
     const nativeChart: any = { leftAxis, rightAxis };
-
-    applyYAxisDualIOS(nativeChart, {
-      left: {
-        textColor: '#FFFFFF',
-        textSize: 11,
-        position: 'INSIDE_CHART',
-        zeroLine: { enabled: true, lineWidth: 2, lineColor: '#00FF00' },
+    const retainedChartObjects: any[] = [];
+    applyYAxisDualIOS(
+      nativeChart,
+      {
+        left: {
+          textColor: '#FFFFFF',
+          textSize: 11,
+          position: 'INSIDE_CHART',
+          zeroLine: { enabled: true, lineWidth: 2, lineColor: '#00FF00' },
+        },
+        right: {
+          textColor: '#FF00FF',
+          position: 'OUTSIDE_CHART',
+        },
       },
-      right: {
-        textColor: '#FF00FF',
-        position: 'OUTSIDE_CHART',
-      },
-    });
+      retainedChartObjects,
+    );
 
     expect(leftAxis.labelTextColor).toEqual({ mockUIColor: true });
     expect(leftAxis.labelFont).toEqual({ size: 11 });

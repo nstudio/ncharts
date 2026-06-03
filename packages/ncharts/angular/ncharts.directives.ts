@@ -20,7 +20,6 @@ export abstract class ChartBaseDirective implements OnDestroy, AfterViewInit {
   logEnabled = input<boolean>();
   noDataText = input<string>();
   noDataTextColor = input<ChartColor>();
-  touchEnabled = input<boolean>();
   dragDecelerationEnabled = input<boolean>();
   dragDecelerationFrictionCoef = input<number>();
   highlightPerTapEnabled = input<boolean>();
@@ -83,13 +82,6 @@ export abstract class ChartBaseDirective implements OnDestroy, AfterViewInit {
     });
 
     effect(() => {
-      const value = this.touchEnabled();
-      if (this.initialized && value !== undefined) {
-        this.chart.touchEnabled = value;
-      }
-    });
-
-    effect(() => {
       const value = this.dragDecelerationEnabled();
       if (this.initialized && value !== undefined) {
         this.chart.dragDecelerationEnabled = value;
@@ -100,13 +92,6 @@ export abstract class ChartBaseDirective implements OnDestroy, AfterViewInit {
       const value = this.dragDecelerationFrictionCoef();
       if (this.initialized && value !== undefined) {
         this.chart.dragDecelerationFrictionCoef = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.highlightPerTapEnabled();
-      if (this.initialized && value !== undefined) {
-        this.chart.highlightPerTapEnabled = value;
       }
     });
 
@@ -213,17 +198,11 @@ export abstract class ChartBaseDirective implements OnDestroy, AfterViewInit {
     const noDataTextColor = this.noDataTextColor();
     if (noDataTextColor) this.chart.noDataTextColor = noDataTextColor;
 
-    const touchEnabled = this.touchEnabled();
-    if (touchEnabled !== undefined) this.chart.touchEnabled = touchEnabled;
-
     const dragDecelerationEnabled = this.dragDecelerationEnabled();
     if (dragDecelerationEnabled !== undefined) this.chart.dragDecelerationEnabled = dragDecelerationEnabled;
 
     const dragDecelerationFrictionCoef = this.dragDecelerationFrictionCoef();
     if (dragDecelerationFrictionCoef !== undefined) this.chart.dragDecelerationFrictionCoef = dragDecelerationFrictionCoef;
-
-    const highlightPerTapEnabled = this.highlightPerTapEnabled();
-    if (highlightPerTapEnabled !== undefined) this.chart.highlightPerTapEnabled = highlightPerTapEnabled;
 
     const chartDescription = this.chartDescription();
     if (chartDescription) this.chart.chartDescription = chartDescription;
@@ -275,12 +254,8 @@ export abstract class BarLineChartBaseDirective extends ChartBaseDirective {
   maxVisibleValueCount = input<number>();
   autoScaleMinMaxEnabled = input<boolean>();
   keepPositionOnRotation = input<boolean>();
-  highlightPerDragEnabled = input<boolean>();
-  scaleEnabled = input<boolean>();
   scaleXEnabled = input<boolean>();
   scaleYEnabled = input<boolean>();
-  dragEnabled = input<boolean>();
-  pinchZoom = input<boolean>();
   doubleTapToZoomEnabled = input<boolean>();
   yAxis = input<YAxisConfigDual>();
 
@@ -359,20 +334,6 @@ export abstract class BarLineChartBaseDirective extends ChartBaseDirective {
     });
 
     effect(() => {
-      const value = this.highlightPerDragEnabled();
-      if (this.initialized && value !== undefined) {
-        this.chart.highlightPerDragEnabled = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.scaleEnabled();
-      if (this.initialized && value !== undefined) {
-        this.chart.scaleEnabled = value;
-      }
-    });
-
-    effect(() => {
       const value = this.scaleXEnabled();
       if (this.initialized && value !== undefined) {
         this.chart.scaleXEnabled = value;
@@ -383,20 +344,6 @@ export abstract class BarLineChartBaseDirective extends ChartBaseDirective {
       const value = this.scaleYEnabled();
       if (this.initialized && value !== undefined) {
         this.chart.scaleYEnabled = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.dragEnabled();
-      if (this.initialized && value !== undefined) {
-        this.chart.dragEnabled = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.pinchZoom();
-      if (this.initialized && value !== undefined) {
-        this.chart.pinchZoom = value;
       }
     });
 
@@ -449,23 +396,11 @@ export abstract class BarLineChartBaseDirective extends ChartBaseDirective {
     const keepPositionOnRotation = this.keepPositionOnRotation();
     if (keepPositionOnRotation !== undefined) this.chart.keepPositionOnRotation = keepPositionOnRotation;
 
-    const highlightPerDragEnabled = this.highlightPerDragEnabled();
-    if (highlightPerDragEnabled !== undefined) this.chart.highlightPerDragEnabled = highlightPerDragEnabled;
-
-    const scaleEnabled = this.scaleEnabled();
-    if (scaleEnabled !== undefined) this.chart.scaleEnabled = scaleEnabled;
-
     const scaleXEnabled = this.scaleXEnabled();
     if (scaleXEnabled !== undefined) this.chart.scaleXEnabled = scaleXEnabled;
 
     const scaleYEnabled = this.scaleYEnabled();
     if (scaleYEnabled !== undefined) this.chart.scaleYEnabled = scaleYEnabled;
-
-    const dragEnabled = this.dragEnabled();
-    if (dragEnabled !== undefined) this.chart.dragEnabled = dragEnabled;
-
-    const pinchZoom = this.pinchZoom();
-    if (pinchZoom !== undefined) this.chart.pinchZoom = pinchZoom;
 
     const doubleTapToZoomEnabled = this.doubleTapToZoomEnabled();
     if (doubleTapToZoomEnabled !== undefined) this.chart.doubleTapToZoomEnabled = doubleTapToZoomEnabled;
@@ -503,7 +438,6 @@ export abstract class BarLineChartBaseDirective extends ChartBaseDirective {
 @Directive()
 export abstract class PieRadarChartBaseDirective extends ChartBaseDirective {
   rotationAngle = input<number>();
-  rotationEnabled = input<boolean>();
   minOffset = input<number>();
 
   constructor(el: ElementRef) {
@@ -513,13 +447,6 @@ export abstract class PieRadarChartBaseDirective extends ChartBaseDirective {
       const value = this.rotationAngle();
       if (this.initialized && value !== undefined) {
         this.chart.rotationAngle = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.rotationEnabled();
-      if (this.initialized && value !== undefined) {
-        this.chart.rotationEnabled = value;
       }
     });
 
@@ -538,9 +465,6 @@ export abstract class PieRadarChartBaseDirective extends ChartBaseDirective {
     const rotationAngle = this.rotationAngle();
     if (rotationAngle !== undefined) this.chart.rotationAngle = rotationAngle;
 
-    const rotationEnabled = this.rotationEnabled();
-    if (rotationEnabled !== undefined) this.chart.rotationEnabled = rotationEnabled;
-
     const minOffset = this.minOffset();
     if (minOffset !== undefined) this.chart.minOffset = minOffset;
   }
@@ -555,25 +479,8 @@ export abstract class PieRadarChartBaseDirective extends ChartBaseDirective {
   standalone: true,
 })
 export class LineChartDirective extends BarLineChartBaseDirective {
-  data = input<LineChartData>();
-
   constructor(elRef: ElementRef) {
     super(elRef);
-
-    effect(() => {
-      const value = this.data();
-      if (this.initialized && value !== undefined) {
-        this.chart.data = value;
-      }
-    });
-  }
-
-  protected override applyInitialProperties(): void {
-    super.applyInitialProperties();
-    const data = this.data();
-    if (data && this.chart) {
-      this.chart.data = data;
-    }
   }
 }
 
@@ -586,25 +493,8 @@ export class LineChartDirective extends BarLineChartBaseDirective {
   standalone: true,
 })
 export class BarChartDirective extends BarLineChartBaseDirective {
-  data = input<BarChartData>();
-
   constructor(elRef: ElementRef) {
     super(elRef);
-
-    effect(() => {
-      const value = this.data();
-      if (this.initialized && value !== undefined) {
-        this.chart.data = value;
-      }
-    });
-  }
-
-  protected override applyInitialProperties(): void {
-    super.applyInitialProperties();
-    const data = this.data();
-    if (data && this.chart) {
-      this.chart.data = data;
-    }
   }
 }
 
@@ -648,179 +538,8 @@ export class HorizontalBarChartDirective extends BarLineChartBaseDirective {
   standalone: true,
 })
 export class PieChartDirective extends PieRadarChartBaseDirective {
-  data = input<PieChartData>();
-  drawHole = input<boolean>();
-  holeRadius = input<number>();
-  transparentCircleRadius = input<number>();
-  holeColor = input<ChartColor>();
-  transparentCircleColor = input<ChartColor>();
-  drawCenterText = input<boolean>();
-  centerText = input<string>();
-  centerTextColor = input<ChartColor>();
-  centerTextSize = input<number>();
-  drawSliceText = input<boolean>();
-  sliceTextSize = input<number>();
-  sliceTextColor = input<ChartColor>();
-  usePercentValues = input<boolean>();
-  maxAngle = input<number>();
-
   constructor(elRef: ElementRef) {
     super(elRef);
-
-    effect(() => {
-      const value = this.data();
-      if (this.initialized && value !== undefined) {
-        this.chart.data = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.drawHole();
-      if (this.initialized && value !== undefined) {
-        this.chart.drawHole = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.holeRadius();
-      if (this.initialized && value !== undefined) {
-        this.chart.holeRadius = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.transparentCircleRadius();
-      if (this.initialized && value !== undefined) {
-        this.chart.transparentCircleRadius = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.holeColor();
-      if (this.initialized && value !== undefined) {
-        this.chart.holeColor = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.transparentCircleColor();
-      if (this.initialized && value !== undefined) {
-        this.chart.transparentCircleColor = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.drawCenterText();
-      if (this.initialized && value !== undefined) {
-        this.chart.drawCenterText = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.centerText();
-      if (this.initialized && value !== undefined) {
-        this.chart.centerText = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.centerTextColor();
-      if (this.initialized && value !== undefined) {
-        this.chart.centerTextColor = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.centerTextSize();
-      if (this.initialized && value !== undefined) {
-        this.chart.centerTextSize = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.drawSliceText();
-      if (this.initialized && value !== undefined) {
-        this.chart.drawSliceText = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.sliceTextSize();
-      if (this.initialized && value !== undefined) {
-        this.chart.sliceTextSize = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.sliceTextColor();
-      if (this.initialized && value !== undefined) {
-        this.chart.sliceTextColor = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.usePercentValues();
-      if (this.initialized && value !== undefined) {
-        this.chart.usePercentValues = value;
-      }
-    });
-
-    effect(() => {
-      const value = this.maxAngle();
-      if (this.initialized && value !== undefined) {
-        this.chart.maxAngle = value;
-      }
-    });
-  }
-
-  protected override applyInitialProperties(): void {
-    super.applyInitialProperties();
-    if (!this.chart) return;
-
-    const data = this.data();
-    if (data) this.chart.data = data;
-
-    const drawHole = this.drawHole();
-    if (drawHole !== undefined) this.chart.drawHole = drawHole;
-
-    const holeRadius = this.holeRadius();
-    if (holeRadius !== undefined) this.chart.holeRadius = holeRadius;
-
-    const transparentCircleRadius = this.transparentCircleRadius();
-    if (transparentCircleRadius !== undefined) this.chart.transparentCircleRadius = transparentCircleRadius;
-
-    const holeColor = this.holeColor();
-    if (holeColor) this.chart.holeColor = holeColor;
-
-    const transparentCircleColor = this.transparentCircleColor();
-    if (transparentCircleColor) this.chart.transparentCircleColor = transparentCircleColor;
-
-    const drawCenterText = this.drawCenterText();
-    if (drawCenterText !== undefined) this.chart.drawCenterText = drawCenterText;
-
-    const centerText = this.centerText();
-    if (centerText) this.chart.centerText = centerText;
-
-    const centerTextColor = this.centerTextColor();
-    if (centerTextColor) this.chart.centerTextColor = centerTextColor;
-
-    const centerTextSize = this.centerTextSize();
-    if (centerTextSize !== undefined) this.chart.centerTextSize = centerTextSize;
-
-    const drawSliceText = this.drawSliceText();
-    if (drawSliceText !== undefined) this.chart.drawSliceText = drawSliceText;
-
-    const sliceTextSize = this.sliceTextSize();
-    if (sliceTextSize !== undefined) this.chart.sliceTextSize = sliceTextSize;
-
-    const sliceTextColor = this.sliceTextColor();
-    if (sliceTextColor) this.chart.sliceTextColor = sliceTextColor;
-
-    const usePercentValues = this.usePercentValues();
-    if (usePercentValues !== undefined) this.chart.usePercentValues = usePercentValues;
-
-    const maxAngle = this.maxAngle();
-    if (maxAngle !== undefined) this.chart.maxAngle = maxAngle;
   }
 }
 
@@ -1045,24 +764,7 @@ export class RadarChartDirective extends PieRadarChartBaseDirective {
   standalone: true,
 })
 export class CombinedChartDirective extends BarLineChartBaseDirective {
-  data = input<CombinedChartData>();
-
   constructor(elRef: ElementRef) {
     super(elRef);
-
-    effect(() => {
-      const value = this.data();
-      if (this.initialized && value !== undefined) {
-        this.chart.data = value;
-      }
-    });
-  }
-
-  protected override applyInitialProperties(): void {
-    super.applyInitialProperties();
-    const data = this.data();
-    if (data && this.chart) {
-      this.chart.data = data;
-    }
   }
 }

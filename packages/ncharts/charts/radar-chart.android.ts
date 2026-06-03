@@ -1,7 +1,7 @@
 /**
  * RadarChart - Android Implementation
  */
-import { RadarChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, RadarDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { RadarChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, RadarDataSetConfig, nchartsLog, nchartsError, animationProperty, ViewPortOffset, extraOffsetsProperty, rotationEnabledProperty } from '../common';
 import { toAndroidColor } from './utils';
 import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisAndroid, applyDescriptionAndroid } from './style-helpers.android';
 
@@ -47,6 +47,7 @@ function applyRadarDataSetConfig(dataSet: com.github.mikephil.charting.data.Rada
 export class RadarChart extends RadarChartBase {
   private _native: com.github.mikephil.charting.charts.RadarChart | null = null;
   private _selectionListener: com.github.mikephil.charting.listener.OnChartValueSelectedListener | null = null;
+  private _retainedChartObjects: Array<any> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] RadarChart.createNativeView()');
@@ -116,11 +117,11 @@ export class RadarChart extends RadarChartBase {
       if (color !== undefined) instance.setWebColorInner(color);
     }
     instance.setSkipWebLineCount(this.skipWebLineCount);
-    instance.setRotationEnabled(this.rotationEnabled);
     instance.setRotationAngle(this.rotationAngle);
   }
 
   disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
     this._selectionListener = null;
     this._native = null;
     this._nativeChart = null;
@@ -217,10 +218,22 @@ export class RadarChart extends RadarChartBase {
     applyLegendAndroid(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisAndroid(this._native, xAxis);
+    applyXAxisAndroid(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionAndroid(this._native, description);
   }
   protected _applyMarker(marker: MarkerConfig): void {}
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsets(value.left, value.top, value.right, value.bottom);
+      this._native.invalidate();
+    }
+  }
+  [rotationEnabledProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.setRotationEnabled(this.rotationEnabled);
+    this._native.invalidate();
+  }
 }

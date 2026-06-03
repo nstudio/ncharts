@@ -1,7 +1,7 @@
 /**
  * CandleStickChart - iOS Implementation
  */
-import { CandleStickChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, CandleDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { CandleStickChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, CandleDataSetConfig, nchartsLog, nchartsError, animationProperty, extraOffsetsProperty, ViewPortOffset } from '../common';
 import { toUIColor, parseEasingIOS } from './utils';
 import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS } from './style-helpers.ios';
 
@@ -41,19 +41,15 @@ class CandleStickChartViewDelegateImpl extends NSObject implements ChartViewDele
 function applyCandleDataSetConfig(dataSet: CandleChartDataSet, config: CandleDataSetConfig): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
-  }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
   }
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
@@ -82,6 +78,7 @@ function applyCandleDataSetConfig(dataSet: CandleChartDataSet, config: CandleDat
 export class CandleStickChart extends CandleStickChartBase {
   private _native: CandleStickChartView | null = null;
   private _delegate: CandleStickChartViewDelegateImpl | null = null;
+  private _retainedChartObjects: Array<any> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] CandleStickChart.createNativeView()');
@@ -132,6 +129,7 @@ export class CandleStickChart extends CandleStickChartBase {
   }
 
   disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
     this._delegate = null;
     this._native = null;
     this._nativeChart = null;
@@ -235,10 +233,10 @@ export class CandleStickChart extends CandleStickChartBase {
     applyLegendIOS(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisIOS(this._native, xAxis);
+    applyXAxisIOS(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    applyYAxisDualIOS(this._native, yAxis);
+    applyYAxisDualIOS(this._native, yAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionIOS(this._native, description);
@@ -266,5 +264,13 @@ export class CandleStickChart extends CandleStickChartBase {
 
   protected _fitScreen(): void {
     this._native?.fitScreen();
+  }
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsetsWithLeftTopRightBottom(value.left, value.top, value.right, value.bottom);
+      this._native.notifyDataSetChanged();
+      this._native.setNeedsDisplay();
+    }
   }
 }

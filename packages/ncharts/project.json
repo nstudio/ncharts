@@ -26,6 +26,11 @@
             "glob": "**/*",
             "input": "packages/ncharts/platforms/",
             "output": "./platforms/"
+          },
+          {
+            "glob": "**/*.d.ts",
+            "input": "packages/ncharts/types/",
+            "output": "./types/"
           }
         ],
         "dependsOn": [

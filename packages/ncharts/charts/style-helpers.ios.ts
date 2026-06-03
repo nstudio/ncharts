@@ -1,5 +1,9 @@
-import type { ChartColor, LegendConfig, XAxisConfig, YAxisConfig, YAxisConfigDual, ChartDescription } from '../common';
+import { type ChartColor, type LegendConfig, type XAxisConfig, type YAxisConfig, type YAxisConfigDual, type ChartDescription, type MarkerConfig, NCharts } from '../common';
+import { NChartsDefaultMarker } from './default-marker.ios';
 import { toUIColor } from './utils';
+import { NSDateAxisValueFormatter } from './formatters/date-formatters.ios';
+import { NSCustomLabelsArrayAxisValueFormatter } from './formatters/custom-labels-array-formatter.ios';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.ios';
 
 export function applyNoDataTextColorIOS(nativeChart: any, noDataTextColor?: ChartColor): void {
   if (!nativeChart || !noDataTextColor) return;
@@ -72,9 +76,30 @@ export function applyLegendIOS(nativeChart: any, legend: LegendConfig): void {
     };
     nativeLegend.form = formMap[legend.form] ?? ChartLegendForm.Default;
   }
+
+  if (legend.custom) {
+    const labels = Array.isArray(legend.custom.labels) ? legend.custom.labels : [];
+    const colors = Array.isArray(legend.custom.colors) ? legend.custom.colors : [];
+    const count = Math.max(labels.length, colors.length);
+
+    const entries: ChartLegendEntry[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const entry = ChartLegendEntry.new();
+      entry.label = labels[i] ?? '';
+
+      const color = toUIColor(colors[i]);
+      if (color) {
+        entry.formColor = color;
+      }
+
+      entries.push(entry);
+    }
+    nativeLegend.setCustomWithEntries(entries);
+  }
 }
 
-export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig): void {
+export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig, retainedChartObjects: Array<any>): void {
   if (!nativeChart || !xAxis) return;
 
   const nativeXAxis = nativeChart.xAxis;
@@ -94,6 +119,18 @@ export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig): void {
     if (gridColor) nativeXAxis.gridColor = gridColor;
   }
   if (xAxis.gridLineWidth !== undefined) nativeXAxis.gridLineWidth = xAxis.gridLineWidth;
+  if (xAxis.gridDashedLine !== undefined) {
+    if (xAxis.gridDashedLine.lineLength && xAxis.gridDashedLine.spaceLength) {
+      nativeXAxis.gridLineDashLengths = NSArray.arrayWithArray([xAxis.gridDashedLine.lineLength, xAxis.gridDashedLine.spaceLength]);
+    }
+    if (xAxis.gridDashedLine.phase) {
+      nativeXAxis.gridLineDashPhase = xAxis.gridDashedLine.phase;
+    }
+  } else {
+    // optional: clear dashed style when not configured
+    nativeXAxis.gridLineDashLengths = null;
+    nativeXAxis.gridLineDashPhase = 0;
+  }
   if (xAxis.axisLineColor) {
     const axisLineColor = toUIColor(xAxis.axisLineColor);
     if (axisLineColor) nativeXAxis.axisLineColor = axisLineColor;
@@ -118,9 +155,19 @@ export function applyXAxisIOS(nativeChart: any, xAxis: XAxisConfig): void {
     };
     nativeXAxis.labelPosition = positionMap[xAxis.position] ?? XAxisLabelPosition.Bottom;
   }
+
+  if (Array.isArray(xAxis.valueFormatter)) {
+    const formatter = NSCustomLabelsArrayAxisValueFormatter.initWithLabels(xAxis.valueFormatter);
+    nativeXAxis.valueFormatter = formatter;
+    retainedChartObjects.push(formatter);
+  } else if (xAxis.valueFormatter === 'date') {
+    const formatter = NSDateAxisValueFormatter.initWithPattern(xAxis.valueFormatterPattern, xAxis.valueFormatterTransformExpression);
+    nativeXAxis.valueFormatter = formatter;
+    retainedChartObjects.push(formatter);
+  }
 }
 
-export function applyYAxisIOS(axis: any, config?: YAxisConfig): void {
+export function applyYAxisIOS(axis: any, retainedChartObjects: Array<any>, config?: YAxisConfig): void {
   if (!axis || !config) return;
 
   if (config.enabled !== undefined) axis.enabled = config.enabled;
@@ -137,6 +184,17 @@ export function applyYAxisIOS(axis: any, config?: YAxisConfig): void {
     if (gridColor) axis.gridColor = gridColor;
   }
   if (config.gridLineWidth !== undefined) axis.gridLineWidth = config.gridLineWidth;
+  if (config.gridDashedLine !== undefined) {
+    if (config.gridDashedLine.lineLength && config.gridDashedLine.spaceLength) {
+      axis.gridLineDashLengths = NSArray.arrayWithArray([config.gridDashedLine.lineLength, config.gridDashedLine.spaceLength]);
+    }
+    if (config.gridDashedLine.phase) {
+      axis.gridLineDashPhase = config.gridDashedLine.phase;
+    }
+  } else {
+    axis.gridLineDashLengths = null;
+    axis.gridLineDashPhase = 0;
+  }
   if (config.axisLineColor) {
     const axisLineColor = toUIColor(config.axisLineColor);
     if (axisLineColor) axis.axisLineColor = axisLineColor;
@@ -168,16 +226,73 @@ export function applyYAxisIOS(axis: any, config?: YAxisConfig): void {
       if (zeroLineColor) axis.zeroLineColor = zeroLineColor;
     }
   }
+  if (config.drawLimitLinesBehindData !== undefined) {
+    axis.drawLimitLinesBehindDataEnabled = config.drawLimitLinesBehindData;
+  }
+
+  // always clean up before setting new lines
+  axis.removeAllLimitLines();
+
+  if (Array.isArray(config.limitLines) && config.limitLines.length) {
+    for (const llCfg of config.limitLines) {
+      if (llCfg.limit == null) continue;
+
+      const label = llCfg.label ?? '';
+      const ll = ChartLimitLine.alloc().initWithLimitLabel(llCfg.limit, label);
+      if (llCfg.lineWidth !== undefined) ll.lineWidth = llCfg.lineWidth;
+
+      if (llCfg.lineColor) {
+        const c = toUIColor(llCfg.lineColor);
+        if (c) ll.lineColor = c;
+      }
+
+      // dashed
+      if (Array.isArray(llCfg.lineDashLengths) && llCfg.lineDashLengths.length >= 2) {
+        ll.lineDashLengths = NSArray.arrayWithArray(llCfg.lineDashLengths);
+        if (llCfg.lineDashPhase !== undefined) ll.lineDashPhase = llCfg.lineDashPhase;
+      } else {
+        ll.lineDashLengths = null;
+        ll.lineDashPhase = 0;
+      }
+
+      // label text styling
+      if (llCfg.valueTextColor) {
+        const tc = toUIColor(llCfg.valueTextColor);
+        if (tc) ll.valueTextColor = tc;
+      }
+      if (llCfg.valueTextSize !== undefined) {
+        ll.valueFont = UIFont.systemFontOfSize(llCfg.valueTextSize);
+      }
+
+      if (llCfg.labelPosition) {
+        const posMap: Record<string, number> = {
+          RIGHT_TOP: ChartLimitLabelPosition.RightTop,
+          RIGHT_BOTTOM: ChartLimitLabelPosition.RightBottom,
+          LEFT_TOP: ChartLimitLabelPosition.LeftTop,
+          LEFT_BOTTOM: ChartLimitLabelPosition.LeftBottom,
+        };
+        ll.labelPosition = posMap[llCfg.labelPosition] ?? ChartLimitLabelPosition.RightTop;
+      }
+      axis.addLimitLine(ll);
+    }
+  }
+  if (config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+    const formatter = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern, config.valueFormatterTransformExpression);
+    axis.valueFormatter = formatter;
+    retainedChartObjects.push(formatter);
+  }
 }
 
-export function applyYAxisDualIOS(nativeChart: any, yAxis: YAxisConfigDual): void {
+export function applyYAxisDualIOS(nativeChart: any, yAxis: YAxisConfigDual, retainedChartObjects: Array<any>): void {
   if (!nativeChart || !yAxis) return;
-  applyYAxisIOS(nativeChart.leftAxis, yAxis.left);
-  applyYAxisIOS(nativeChart.rightAxis, yAxis.right);
+  applyYAxisIOS(nativeChart.leftAxis, retainedChartObjects, yAxis.left);
+  applyYAxisIOS(nativeChart.rightAxis, retainedChartObjects, yAxis.right);
 }
 
 export function applyDescriptionIOS(nativeChart: any, description: ChartDescription): void {
   if (!nativeChart || !description || !nativeChart.chartDescription) return;
+
+  if (description.enabled !== undefined) nativeChart.chartDescription.enabled = description.enabled;
 
   const nativeDescription = nativeChart.chartDescription;
   if (description.text !== undefined) nativeDescription.text = description.text;
@@ -186,4 +301,26 @@ export function applyDescriptionIOS(nativeChart: any, description: ChartDescript
     if (textColor) nativeDescription.textColor = textColor;
   }
   if (description.textSize !== undefined) nativeDescription.font = nativeDescription.font.fontWithSize(description.textSize);
+}
+
+export function applyMarkerIOS(chart: ChartViewBase, cfg: MarkerConfig, retainedChartObjects: Array<any>) {
+  if (!chart) return;
+
+  if (cfg.enabled !== true) {
+    chart.marker = null;
+    return;
+  }
+
+  if (cfg.markerId) {
+    const markerFactory = NCharts._getMarkerFactory(cfg.markerId);
+    if (markerFactory) {
+      const marker = markerFactory(chart, cfg);
+      chart.marker = marker;
+      retainedChartObjects.push(marker);
+    }
+  } else {
+    const marker = NChartsDefaultMarker.create(chart, cfg);
+    chart.marker = marker;
+    retainedChartObjects.push(marker);
+  }
 }

@@ -1,11 +1,12 @@
 /**
  * PieChart - Android Implementation
  */
-import { PieChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, PieDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { PieChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, PieDataSetConfig, nchartsLog, nchartsError, animationProperty, extraOffsetsProperty, ViewPortOffset, rotationEnabledProperty, centerTextProperty, centerTextColorProperty, centerTextSizeProperty, drawHoleProperty, holeRadiusProperty, transparentCircleRadiusProperty, holeColorProperty, ChartColor, transparentCircleColorProperty, drawCenterTextProperty, drawSliceTextProperty, sliceTextSizeProperty, sliceTextColorProperty, usePercentValuesProperty, maxAngleProperty, highlightPerTapEnabledProperty, touchEnabledProperty } from '../common';
 import { toAndroidColor } from './utils';
 import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyDescriptionAndroid } from './style-helpers.android';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.android';
 
-function applyPieDataSetConfig(dataSet: com.github.mikephil.charting.data.PieDataSet, config: PieDataSetConfig): void {
+function applyPieDataSetConfig(dataSet: com.github.mikephil.charting.data.PieDataSet, config: PieDataSetConfig, retainedDataObjects: Array<any>): void {
   if (!dataSet || !config) return;
 
   if (config.colors) {
@@ -19,9 +20,21 @@ function applyPieDataSetConfig(dataSet: com.github.mikephil.charting.data.PieDat
   if (config.highlightEnabled !== undefined) dataSet.setHighlightEnabled(config.highlightEnabled);
   if (config.drawValues !== undefined) dataSet.setDrawValues(config.drawValues);
   if (config.valueTextSize !== undefined) dataSet.setValueTextSize(config.valueTextSize);
+
+  const isOutsideSlice = config.xValuePosition === 'OUTSIDE_SLICE' || config.yValuePosition === 'OUTSIDE_SLICE';
   if (config.valueTextColor) {
     const color = toAndroidColor(config.valueTextColor);
     if (color !== undefined) dataSet.setValueTextColor(color);
+  } else if (isOutsideSlice) {
+    const sliceColors = dataSet.getColors();
+    if (sliceColors) {
+      dataSet.setValueTextColors(sliceColors);
+    }
+  } else if (config.color) {
+    const color = toAndroidColor(config.color);
+    if (color !== undefined) {
+      dataSet.setValueTextColor(color);
+    }
   }
   if (config.visible !== undefined) dataSet.setVisible(config.visible);
   if (config.sliceSpace !== undefined) dataSet.setSliceSpace(config.sliceSpace);
@@ -39,15 +52,25 @@ function applyPieDataSetConfig(dataSet: com.github.mikephil.charting.data.PieDat
   if (config.valueLineColor) {
     const color = toAndroidColor(config.valueLineColor);
     if (color !== undefined) dataSet.setValueLineColor(color);
+  } else {
+    dataSet.setUsingSliceColorAsValueLineColor(true);
   }
   if (config.valueLineWidth !== undefined) dataSet.setValueLineWidth(config.valueLineWidth);
   if (config.valueLinePart1OffsetPercentage !== undefined) dataSet.setValueLinePart1OffsetPercentage(config.valueLinePart1OffsetPercentage);
-  if (config.valueLineVariableLength !== undefined) dataSet.setUsingSliceColorAsValueLineColor(config.valueLineVariableLength);
+  if (config.valueLineVariableLength !== undefined) dataSet.setValueLineVariableLength(config.valueLineVariableLength);
+
+  if (config.valueFormatter === 'number' || config.valueFormatter === 'suffix' || config.valueFormatter === 'percent') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.setValueFormatter(vf);
+    retainedDataObjects.push(vf);
+  }
 }
 
 export class PieChart extends PieChartBase {
   private _native: com.github.mikephil.charting.charts.PieChart | null = null;
   private _selectionListener: com.github.mikephil.charting.listener.OnChartValueSelectedListener | null = null;
+  private _retainedChartObjects: Array<any> = [];
+  private _retainedDataObjects: Array<any> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] PieChart.createNativeView()');
@@ -61,7 +84,6 @@ export class PieChart extends PieChartBase {
     super.initNativeView();
 
     const instance = this._native!;
-    instance.setHighlightPerTapEnabled(this.highlightPerTapEnabled);
     if (this.chartBackgroundColor) {
       const color = toAndroidColor(this.chartBackgroundColor);
       if (color !== undefined) instance.setBackgroundColor(color);
@@ -102,59 +124,22 @@ export class PieChart extends PieChartBase {
     if (this.data) this.applyData();
   }
 
-  private _applyPieChartConfig(): void {
-    const instance = this._native!;
-    instance.setDrawHoleEnabled(this.drawHole);
-    instance.setHoleRadius(this.holeRadius);
-    instance.setTransparentCircleRadius(this.transparentCircleRadius);
-    if (this.holeColor) {
-      const color = toAndroidColor(this.holeColor);
-      if (color !== undefined) instance.setHoleColor(color);
-    }
-    instance.setDrawCenterText(this.drawCenterText);
-    if (this.centerText) instance.setCenterText(this.centerText);
-    if (this.centerTextColor) {
-      const color = toAndroidColor(this.centerTextColor);
-      if (color !== undefined) instance.setCenterTextColor(color);
-    }
-    if (this.centerTextSize) instance.setCenterTextSize(this.centerTextSize);
-    instance.setUsePercentValues(this.usePercentValues);
-    instance.setDrawEntryLabels(this.drawSliceText);
-    if (this.sliceTextSize) instance.setEntryLabelTextSize(this.sliceTextSize);
-    if (this.sliceTextColor) {
-      const color = toAndroidColor(this.sliceTextColor);
-      if (color !== undefined) instance.setEntryLabelColor(color);
-    }
-    instance.setRotationEnabled(this.rotationEnabled);
-    instance.setRotationAngle(this.rotationAngle);
-    instance.setMaxAngle(this.maxAngle);
-  }
-
   disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
+    this._retainedDataObjects.length = 0;
     this._selectionListener = null;
     this._native = null;
     this._nativeChart = null;
     super.disposeNativeView();
   }
 
+  private _applyPieChartConfig(): void {
+    const instance = this._native!;
+    instance.setRotationAngle(this.rotationAngle);
+  }
+
   get nativeChart(): any {
     return this._native;
-  }
-
-  // Property change handlers
-  onDrawHoleChange(): void {
-    if (!this._native) return;
-    nchartsLog('[ncharts] onDrawHoleChange:', this.drawHole);
-    this._native.setDrawHoleEnabled(this.drawHole);
-    this._native.invalidate();
-  }
-
-  onHoleRadiusChange(): void {
-    if (!this._native) return;
-    nchartsLog('[ncharts] onHoleRadiusChange:', this.holeRadius);
-    this._native.setHoleRadius(this.holeRadius);
-    this._native.setTransparentCircleRadius(this.transparentCircleRadius);
-    this._native.invalidate();
   }
 
   onRotationAngleChange(): void {
@@ -169,6 +154,9 @@ export class PieChart extends PieChartBase {
 
     nchartsLog('[ncharts] PieChart._applyDataAndroid called');
     const instance = this._native;
+
+    // clear any retained data objects / formatters
+    this._retainedDataObjects.length = 0;
 
     // Pie chart typically has one dataset
     for (const ds of this.data!.dataSets) {
@@ -186,7 +174,7 @@ export class PieChart extends PieChartBase {
 
       const dataSet = new com.github.mikephil.charting.data.PieDataSet(entries, ds.label);
       if (ds.config) {
-        applyPieDataSetConfig(dataSet, ds.config);
+        applyPieDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
       }
 
       const chartData = new com.github.mikephil.charting.data.PieData(dataSet);
@@ -235,10 +223,143 @@ export class PieChart extends PieChartBase {
     applyLegendAndroid(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisAndroid(this._native, xAxis);
+    applyXAxisAndroid(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionAndroid(this._native, description);
   }
   protected _applyMarker(marker: MarkerConfig): void {}
+
+  private updateCenterText(): void {
+    if (!this._native) return;
+    this._native.setDrawCenterText(this.drawCenterText);
+    if (this.centerText) {
+      this._native.setCenterText(this.centerText);
+      if (this.centerTextColor) {
+        const color = toAndroidColor(this.centerTextColor);
+        if (color !== undefined) {
+          this._native.setCenterTextColor(color);
+        }
+      }
+      if (this.centerTextSize) {
+        this._native.setCenterTextSize(this.centerTextSize);
+      }
+    } else {
+      this._native.setCenterText('');
+    }
+    this._native.invalidate();
+  }
+
+  // Property change handlers
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsets(value.left, value.top, value.right, value.bottom);
+      this._native.invalidate();
+    }
+  }
+
+  [touchEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setTouchEnabled(value);
+    }
+  }
+
+  [highlightPerTapEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setHighlightPerTapEnabled(value);
+    }
+  }
+
+  [drawHoleProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.setDrawHoleEnabled(value);
+    this._native.invalidate();
+  }
+
+  [holeRadiusProperty.setNative](value: number) {
+    if (!this._native) return;
+    nchartsLog('[ncharts] onHoleRadiusChange:', this.holeRadius);
+    this._native.setHoleRadius(this.holeRadius);
+    this._native.invalidate();
+  }
+
+  [transparentCircleRadiusProperty.setNative](value: number) {
+    if (!this._native) return;
+    this._native.setTransparentCircleRadius(this.transparentCircleRadius);
+    this._native.invalidate();
+  }
+
+  [holeColorProperty.setNative](value: ChartColor) {
+    if (!this._native || value == null) return;
+    const color = toAndroidColor(this.holeColor);
+    if (color !== undefined) {
+      this._native.setHoleColor(color);
+      this._native.invalidate();
+    }
+  }
+
+  [transparentCircleColorProperty.setNative](value: ChartColor) {
+    if (!this._native || value == null) return;
+    const color = toAndroidColor(value);
+    if (color !== undefined) {
+      this._native.setTransparentCircleColor(color);
+      this._native.invalidate();
+    }
+  }
+
+  [drawCenterTextProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.setDrawCenterText(value);
+    this._native.invalidate();
+  }
+
+  [centerTextProperty.setNative](value: any) {
+    this.updateCenterText();
+  }
+
+  [centerTextColorProperty.setNative](value: any) {
+    this.updateCenterText();
+  }
+
+  [centerTextSizeProperty.setNative](value: any) {
+    this.updateCenterText();
+  }
+
+  [drawSliceTextProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.setDrawEntryLabels(value);
+    this._native.invalidate();
+  }
+
+  [sliceTextSizeProperty.setNative](value: number) {
+    if (!this._native) return;
+    this._native.setEntryLabelTextSize(value);
+    this._native.invalidate();
+  }
+
+  [sliceTextColorProperty.setNative](value: ChartColor) {
+    if (!this._native || value == null) return;
+    const color = toAndroidColor(value);
+    if (color !== undefined) {
+      this._native.setEntryLabelColor(color);
+      this._native.invalidate();
+    }
+  }
+
+  [usePercentValuesProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.setUsePercentValues(value);
+    this._native.invalidate();
+  }
+  [rotationEnabledProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.setRotationEnabled(this.rotationEnabled);
+    this._native.invalidate();
+  }
+
+  [maxAngleProperty.setNative](value: number) {
+    if (!this._native) return;
+    this._native.setMaxAngle(value);
+    this._native.invalidate();
+  }
 }

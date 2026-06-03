@@ -1,11 +1,14 @@
 /**
  * BarChart - Android Implementation
  */
-import { BarChartBase, HorizontalBarChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BarDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { BarChartBase, HorizontalBarChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BarDataSetConfig, nchartsLog, nchartsError, ViewPortOffset, extraOffsetsProperty, animationProperty, touchEnabledProperty, dragEnabledProperty, scaleEnabledProperty, pinchZoomProperty, highlightPerDragEnabledProperty, highlightPerTapEnabledProperty } from '../common';
 import { toAndroidColor } from './utils';
-import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
+import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid, applyMarkerAndroid } from './style-helpers.android';
+import { NSBarChartRenderer } from './renderers/bar-chart-renderer.android';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.android';
+import { ChartPagingDetector } from './chart-paging-detector/chart-paging-detector';
 
-function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDataSet, config: BarDataSetConfig): void {
+function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDataSet, config: BarDataSetConfig, retainedDataObjects: com.github.mikephil.charting.formatter.ValueFormatter[]): void {
   if (!dataSet || !config) return;
 
   if (config.color) {
@@ -20,7 +23,9 @@ function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDat
     });
     dataSet.setColors(colors);
   }
+
   if (config.highlightEnabled !== undefined) dataSet.setHighlightEnabled(config.highlightEnabled);
+
   if (config.drawValues !== undefined) dataSet.setDrawValues(config.drawValues);
   if (config.valueTextSize !== undefined) dataSet.setValueTextSize(config.valueTextSize);
   if (config.valueTextColor) {
@@ -40,11 +45,27 @@ function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDat
   if (config.stackLabels) {
     dataSet.setStackLabels(config.stackLabels);
   }
+  if (config.barBorderWidth !== undefined) {
+    dataSet.setBarBorderWidth(config.barBorderWidth);
+  }
+  if (config.barBorderColor) {
+    const color = toAndroidColor(config.barBorderColor);
+    if (color !== undefined) dataSet.setBarBorderColor(color);
+  }
+  if (config.valueFormatter === 'number' || config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.setValueFormatter(vf);
+    retainedDataObjects.push(vf);
+  }
 }
 
 export class BarChart extends BarChartBase {
   protected _native: com.github.mikephil.charting.charts.BarChart | null = null;
   private _selectionListener: com.github.mikephil.charting.listener.OnChartValueSelectedListener | null = null;
+  private _barChartRenderer: NSBarChartRenderer | null = null;
+  private _pageDetector: ChartPagingDetector | null = null;
+  private _retainedChartObjects: Array<any> = [];
+  private _retainedDataObjects: Array<com.github.mikephil.charting.formatter.ValueFormatter> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] BarChart.createNativeView()');
@@ -57,7 +78,6 @@ export class BarChart extends BarChartBase {
     super.initNativeView();
 
     const instance = this._native!;
-    instance.setHighlightPerTapEnabled(this.highlightPerTapEnabled);
     if (this.chartBackgroundColor) {
       const color = toAndroidColor(this.chartBackgroundColor);
       if (color !== undefined) instance.setBackgroundColor(color);
@@ -90,15 +110,35 @@ export class BarChart extends BarChartBase {
     });
     instance.setOnChartValueSelectedListener(this._selectionListener);
 
+    // Set up page change detector
+    this._pageDetector = new ChartPagingDetector(
+      this,
+      async (dir, info) => {
+        this.notify({
+          eventName: BarChart.pageEvent,
+          object: this,
+          dir,
+          info,
+        });
+      },
+      { idleMs: 160, edgeRatio: 0.08, cooldownMs: 500, pagingMaxScaleX: 1, pagingMaxScaleY: 1 },
+    );
+
     if (this.legend) this._applyLegend(this.legend);
     if (this.xAxis) this._applyXAxis(this.xAxis);
     if (this.yAxis) this._applyYAxis(this.yAxis);
     if (this.chartDescription) this._applyDescription(this.chartDescription);
-
     if (this.data) this.applyData();
+    if (this.marker) this._applyMarker(this.marker);
   }
 
   disposeNativeView(): void {
+    this._pageDetector?.detach();
+    this._pageDetector = null;
+    this._barChartRenderer?.detach();
+    this._barChartRenderer = null;
+    this._retainedChartObjects.length = 0;
+    this._retainedDataObjects.length = 0;
     this._selectionListener = null;
     this._native = null;
     this._nativeChart = null;
@@ -114,6 +154,15 @@ export class BarChart extends BarChartBase {
 
     nchartsLog('[ncharts] BarChart._applyDataAndroid called');
     const instance = this._native;
+
+    // reset highlights and marker to prevent crashes from markers to be drawn on removed data
+    instance.highlightValues(null);
+
+    // clear any retained data objects / formatters
+    this._retainedDataObjects.length = 0;
+
+    // clear any retained data objects / formatters
+    this._retainedDataObjects.length = 0;
 
     const dataSets = new java.util.ArrayList<com.github.mikephil.charting.interfaces.datasets.IBarDataSet>();
 
@@ -133,15 +182,28 @@ export class BarChart extends BarChartBase {
           entry = new com.github.mikephil.charting.data.BarEntry(index, yVals);
         } else {
           const x = value.x ?? index;
-          if (Array.isArray(value.y)) {
-            // Stacked bar with x
-            const yVals = Array.create('float', value.y.length);
-            value.y.forEach((v: number, i: number) => {
-              yVals[i] = v;
-            });
-            entry = new com.github.mikephil.charting.data.BarEntry(x, yVals);
+          if (value.marker) {
+            if (Array.isArray(value.y)) {
+              // Stacked bar with x
+              const yVals = Array.create('float', value.y.length);
+              value.y.forEach((v: number, i: number) => {
+                yVals[i] = v;
+              });
+              entry = new com.github.mikephil.charting.data.BarEntry(x, yVals, value.marker);
+            } else {
+              entry = new com.github.mikephil.charting.data.BarEntry(x, value.y, value.marker);
+            }
           } else {
-            entry = new com.github.mikephil.charting.data.BarEntry(x, value.y);
+            if (Array.isArray(value.y)) {
+              // Stacked bar with x
+              const yVals = Array.create('float', value.y.length);
+              value.y.forEach((v: number, i: number) => {
+                yVals[i] = v;
+              });
+              entry = new com.github.mikephil.charting.data.BarEntry(x, yVals);
+            } else {
+              entry = new com.github.mikephil.charting.data.BarEntry(x, value.y);
+            }
           }
         }
         entries.add(entry);
@@ -149,7 +211,7 @@ export class BarChart extends BarChartBase {
 
       const dataSet = new com.github.mikephil.charting.data.BarDataSet(entries, ds.label);
       if (ds.config) {
-        applyBarDataSetConfig(dataSet, ds.config);
+        applyBarDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
       }
       dataSets.add(dataSet);
     }
@@ -167,8 +229,21 @@ export class BarChart extends BarChartBase {
       chartData.groupBars(group.fromX, group.groupSpace, group.barSpace);
     }
 
+    // install custom renderer if needed
+    const barConfigs = this.data?.dataSets?.map((ds) => ds.config).filter(Boolean) ?? [];
+    const needsCustomBarRenderer = barConfigs.some((cfg) => cfg?.drawValuesInside);
+    this._barChartRenderer?.detach();
+    this._barChartRenderer = null;
+    if (needsCustomBarRenderer) {
+      this._barChartRenderer = NSBarChartRenderer.create(instance, barConfigs);
+    }
+
     instance.setData(chartData);
     instance.invalidate();
+
+    // data and animation properties cannot be set in a guranteed order
+    // hence after each data update an animation needs to be executed
+    if (this.animation) this._applyAnimation(this.animation);
   }
 
   protected _applyAnimation(animation: ChartAnimation): void {
@@ -210,15 +285,17 @@ export class BarChart extends BarChartBase {
     applyLegendAndroid(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisAndroid(this._native, xAxis);
+    applyXAxisAndroid(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    applyYAxisDualAndroid(this._native, yAxis);
+    applyYAxisDualAndroid(this._native, yAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionAndroid(this._native, description);
   }
-  protected _applyMarker(marker: MarkerConfig): void {}
+  protected _applyMarker(marker: MarkerConfig): void {
+    applyMarkerAndroid(this._native, marker, this._retainedChartObjects);
+  }
 
   protected _moveViewToX(xValue: number): void {
     this._native?.moveViewToX(xValue);
@@ -244,6 +321,48 @@ export class BarChart extends BarChartBase {
 
   protected _fitScreen(): void {
     this._native?.fitScreen();
+  }
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsets(value.left, value.top, value.right, value.bottom);
+      this._native.invalidate();
+    }
+  }
+  [touchEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setTouchEnabled(value);
+    }
+  }
+
+  [dragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setDragEnabled(value);
+    }
+  }
+
+  [scaleEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setScaleEnabled(value);
+    }
+  }
+
+  [pinchZoomProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setPinchZoom(value);
+    }
+  }
+
+  [highlightPerDragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setHighlightPerDragEnabled(value);
+    }
+  }
+
+  [highlightPerTapEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setHighlightPerTapEnabled(value);
+    }
   }
 }
 

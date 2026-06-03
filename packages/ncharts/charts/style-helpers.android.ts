@@ -1,5 +1,9 @@
-import type { ChartColor, LegendConfig, XAxisConfig, YAxisConfig, YAxisConfigDual, ChartDescription } from '../common';
+import { type ChartColor, type LegendConfig, type XAxisConfig, type YAxisConfig, type YAxisConfigDual, type ChartDescription, type MarkerConfig, NCharts } from '../common';
+import { NChartsDefaultMarker } from './default-marker.android';
 import { toAndroidColor } from './utils';
+import { NSDateAxisValueFormatter } from './formatters/date-formatters.android';
+import { NSCustomLabelsArrayFormatter } from './formatters/custom-labels-array-formatter.android';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.android';
 
 export function applyNoDataTextColorAndroid(nativeChart: any, noDataTextColor?: ChartColor): void {
   if (!nativeChart || !noDataTextColor) return;
@@ -74,9 +78,30 @@ export function applyLegendAndroid(nativeChart: any, legend: LegendConfig): void
     };
     nativeLegend.setForm(formMap[legend.form] ?? Legend.LegendForm.DEFAULT);
   }
+
+  if (legend.custom) {
+    const labels = Array.isArray(legend.custom.labels) ? legend.custom.labels : [];
+    const colors = Array.isArray(legend.custom.colors) ? legend.custom.colors : [];
+    const count = Math.max(labels.length, colors.length);
+
+    const entries = Array.create(com.github.mikephil.charting.components.LegendEntry, count);
+
+    for (let i = 0; i < count; i++) {
+      const e = new com.github.mikephil.charting.components.LegendEntry();
+      e.label = labels[i] ?? '';
+
+      const c = toAndroidColor(colors[i]);
+      if (c !== undefined) {
+        e.formColor = c;
+      }
+
+      entries[i] = e;
+    }
+    nativeLegend.setCustom(entries);
+  }
 }
 
-export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig): void {
+export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig, retainedChartObjects: Array<any>): void {
   if (!nativeChart || !xAxis) return;
 
   const nativeXAxis = nativeChart.getXAxis?.();
@@ -96,6 +121,13 @@ export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig): void {
     if (gridColor !== undefined) nativeXAxis.setGridColor(gridColor);
   }
   if (xAxis.gridLineWidth !== undefined) nativeXAxis.setGridLineWidth(xAxis.gridLineWidth);
+  if (xAxis.gridDashedLine !== undefined) {
+    if (xAxis.gridDashedLine.lineLength && xAxis.gridDashedLine.spaceLength) {
+      nativeXAxis.enableGridDashedLine(xAxis.gridDashedLine.lineLength, xAxis.gridDashedLine.spaceLength, xAxis.gridDashedLine.phase ?? 0);
+    }
+  } else {
+    nativeXAxis.disableGridDashedLine();
+  }
   if (xAxis.axisLineColor) {
     const axisLineColor = toAndroidColor(xAxis.axisLineColor);
     if (axisLineColor !== undefined) nativeXAxis.setAxisLineColor(axisLineColor);
@@ -121,9 +153,18 @@ export function applyXAxisAndroid(nativeChart: any, xAxis: XAxisConfig): void {
     };
     nativeXAxis.setPosition(positionMap[xAxis.position] ?? XAxis.XAxisPosition.BOTTOM);
   }
+  if (Array.isArray(xAxis.valueFormatter)) {
+    const formatter = new NSCustomLabelsArrayFormatter(xAxis.valueFormatter);
+    nativeXAxis.setValueFormatter(formatter);
+    retainedChartObjects.push(formatter);
+  } else if (xAxis.valueFormatter === 'date') {
+    const formatter = NSDateAxisValueFormatter.initWithPattern(xAxis.valueFormatterPattern, xAxis.valueFormatterTransformExpression);
+    nativeXAxis.setValueFormatter(formatter);
+    retainedChartObjects.push(formatter);
+  }
 }
 
-export function applyYAxisAndroid(axis: any, config?: YAxisConfig): void {
+export function applyYAxisAndroid(axis: any, retainedChartObjects: Array<any>, config?: YAxisConfig): void {
   if (!axis || !config) return;
 
   if (config.enabled !== undefined) axis.setEnabled(config.enabled);
@@ -140,6 +181,13 @@ export function applyYAxisAndroid(axis: any, config?: YAxisConfig): void {
     if (gridColor !== undefined) axis.setGridColor(gridColor);
   }
   if (config.gridLineWidth !== undefined) axis.setGridLineWidth(config.gridLineWidth);
+  if (config.gridDashedLine !== undefined) {
+    if (config.gridDashedLine.lineLength && config.gridDashedLine.spaceLength) {
+      axis.enableGridDashedLine(config.gridDashedLine.lineLength, config.gridDashedLine.spaceLength, config.gridDashedLine.phase ?? 0);
+    }
+  } else {
+    axis.disableGridDashedLine();
+  }
   if (config.axisLineColor) {
     const axisLineColor = toAndroidColor(config.axisLineColor);
     if (axisLineColor !== undefined) axis.setAxisLineColor(axisLineColor);
@@ -171,16 +219,74 @@ export function applyYAxisAndroid(axis: any, config?: YAxisConfig): void {
       if (zeroLineColor !== undefined) axis.setZeroLineColor(zeroLineColor);
     }
   }
+  if (config.drawLimitLinesBehindData !== undefined) {
+    axis.setDrawLimitLinesBehindData(!!config.drawLimitLinesBehindData);
+  }
+
+  // clear to avoid duplicates or wron limit lines on updates
+  axis.removeAllLimitLines();
+
+  if (Array.isArray(config.limitLines) && config.limitLines.length) {
+    const LimitLine = com.github.mikephil.charting.components.LimitLine;
+    const LimitLabelPosition = com.github.mikephil.charting.components.LimitLine.LimitLabelPosition;
+
+    for (const llCfg of config.limitLines) {
+      if (llCfg?.limit == null) continue;
+
+      const ll = new LimitLine(llCfg.limit, llCfg.label ?? '');
+
+      if (llCfg.lineWidth !== undefined) ll.setLineWidth(llCfg.lineWidth);
+
+      if (llCfg.lineColor) {
+        ll.setLineColor(toAndroidColor(llCfg.lineColor));
+      }
+
+      // dashed
+      if (Array.isArray(llCfg.lineDashLengths) && llCfg.lineDashLengths.length >= 2) {
+        const [lineLength, spaceLength] = llCfg.lineDashLengths;
+        ll.enableDashedLine(lineLength, spaceLength, llCfg.lineDashPhase ?? 0);
+      } else {
+        ll.disableDashedLine();
+      }
+
+      // label text styling
+      if (llCfg.valueTextColor) {
+        ll.setTextColor(toAndroidColor(llCfg.valueTextColor));
+      }
+      if (llCfg.valueTextSize !== undefined) {
+        ll.setTextSize(llCfg.valueTextSize); // float
+      }
+
+      // label position
+      if (llCfg.labelPosition) {
+        const posMap: Record<string, any> = {
+          RIGHT_TOP: LimitLabelPosition.RIGHT_TOP,
+          RIGHT_BOTTOM: LimitLabelPosition.RIGHT_BOTTOM,
+          LEFT_TOP: LimitLabelPosition.LEFT_TOP,
+          LEFT_BOTTOM: LimitLabelPosition.LEFT_BOTTOM,
+        };
+        ll.setLabelPosition(posMap[llCfg.labelPosition] ?? LimitLabelPosition.RIGHT_TOP);
+      }
+      axis.addLimitLine(ll);
+    }
+  }
+  if (config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+    const formatter = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern, config.valueFormatterTransformExpression);
+    axis.setValueFormatter(formatter);
+    retainedChartObjects.push(formatter);
+  }
 }
 
-export function applyYAxisDualAndroid(nativeChart: any, yAxis: YAxisConfigDual): void {
+export function applyYAxisDualAndroid(nativeChart: any, yAxis: YAxisConfigDual, retainedChartObjects: Array<any>): void {
   if (!nativeChart || !yAxis) return;
-  applyYAxisAndroid(nativeChart.getAxisLeft?.(), yAxis.left);
-  applyYAxisAndroid(nativeChart.getAxisRight?.(), yAxis.right);
+  applyYAxisAndroid(nativeChart.getAxisLeft?.(), retainedChartObjects, yAxis.left);
+  applyYAxisAndroid(nativeChart.getAxisRight?.(), retainedChartObjects, yAxis.right);
 }
 
 export function applyDescriptionAndroid(nativeChart: any, description: ChartDescription): void {
   if (!nativeChart || !description) return;
+
+  if (description.enabled !== undefined) nativeChart.getDescription().setEnabled(description.enabled);
 
   const nativeDescription = nativeChart.getDescription?.();
   if (!nativeDescription) return;
@@ -193,5 +299,25 @@ export function applyDescriptionAndroid(nativeChart: any, description: ChartDesc
   if (description.textSize !== undefined) nativeDescription.setTextSize(description.textSize);
   if (description.positionX !== undefined && description.positionY !== undefined) {
     nativeDescription.setPosition(description.positionX, description.positionY);
+  }
+}
+export function applyMarkerAndroid(chart: com.github.mikephil.charting.charts.Chart<any>, cfg: MarkerConfig, retainedChartObjects: Array<any>) {
+  if (!chart) return;
+
+  if (cfg.enabled !== true) {
+    chart.setMarker(null);
+    return;
+  }
+  if (cfg.markerId) {
+    const markerFactory = NCharts._getMarkerFactory(cfg.markerId);
+    if (markerFactory) {
+      const marker = markerFactory(chart, cfg);
+      chart.setMarker(marker);
+      retainedChartObjects.push(marker);
+    }
+  } else {
+    const marker = NChartsDefaultMarker.create(chart, cfg);
+    chart.setMarker(marker);
+    retainedChartObjects.push(marker);
   }
 }

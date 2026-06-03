@@ -1,7 +1,7 @@
 /**
  * BubbleChart - Android Implementation
  */
-import { BubbleChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BubbleDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { BubbleChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BubbleDataSetConfig, nchartsLog, nchartsError, animationProperty, extraOffsetsProperty, ViewPortOffset } from '../common';
 import { toAndroidColor } from './utils';
 import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
 
@@ -40,6 +40,7 @@ function applyBubbleDataSetConfig(dataSet: com.github.mikephil.charting.data.Bub
 export class BubbleChart extends BubbleChartBase {
   private _native: com.github.mikephil.charting.charts.BubbleChart | null = null;
   private _selectionListener: com.github.mikephil.charting.listener.OnChartValueSelectedListener | null = null;
+  private _retainedChartObjects: Array<any> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] BubbleChart.createNativeView()');
@@ -95,6 +96,7 @@ export class BubbleChart extends BubbleChartBase {
   }
 
   disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
     this._selectionListener = null;
     this._native = null;
     this._nativeChart = null;
@@ -177,10 +179,10 @@ export class BubbleChart extends BubbleChartBase {
     applyLegendAndroid(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisAndroid(this._native, xAxis);
+    applyXAxisAndroid(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    applyYAxisDualAndroid(this._native, yAxis);
+    applyYAxisDualAndroid(this._native, yAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionAndroid(this._native, description);
@@ -211,5 +213,12 @@ export class BubbleChart extends BubbleChartBase {
 
   protected _fitScreen(): void {
     this._native?.fitScreen();
+  }
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsets(value.left, value.top, value.right, value.bottom);
+      this._native.invalidate();
+    }
   }
 }

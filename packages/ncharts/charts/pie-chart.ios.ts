@@ -1,9 +1,10 @@
 /**
  * PieChart - iOS Implementation
  */
-import { PieChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, PieDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { PieChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, PieDataSetConfig, nchartsLog, nchartsError, animationProperty, drawHoleProperty, holeRadiusProperty, transparentCircleRadiusProperty, holeColorProperty, ChartColor, transparentCircleColorProperty, drawCenterTextProperty, centerTextProperty, centerTextColorProperty, centerTextSizeProperty, drawSliceTextProperty, sliceTextSizeProperty, sliceTextColorProperty, usePercentValuesProperty, maxAngleProperty, extraOffsetsProperty, ViewPortOffset, rotationEnabledProperty, highlightPerTapEnabledProperty, touchEnabledProperty } from '../common';
 import { toUIColor, parseEasingIOS } from './utils';
 import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyDescriptionIOS } from './style-helpers.ios';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.ios';
 
 @NativeClass()
 class PieChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
@@ -38,22 +39,23 @@ class PieChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
   }
 }
 
-function applyPieDataSetConfig(dataSet: PieChartDataSet, config: PieDataSetConfig): void {
+function applyPieDataSetConfig(dataSet: PieChartDataSet, config: PieDataSetConfig, retainedDataObjects: NSObject[]): void {
   if (!dataSet || !config) return;
   nchartsLog('[ncharts] applyPieDataSetConfigIOS START');
 
   try {
-    if (config.colors) {
+    if (config.colors?.length) {
       nchartsLog('[ncharts] Setting colors:', config.colors);
-      const colors: UIColor[] = [];
-      config.colors.forEach((c: any) => {
+      dataSet.resetColors();
+      for (const c of config.colors) {
         const color = toUIColor(c);
-        if (color) colors.push(color);
-      });
-      for (const c of colors) {
-        dataSet.addColor(c);
+        if (color) dataSet.addColor(color);
       }
+    } else if (config.color) {
+      const color = toUIColor(config.color);
+      if (color) dataSet.setColor(color);
     }
+
     if (config.highlightEnabled !== undefined) {
       nchartsLog('[ncharts] Setting highlightEnabled:', config.highlightEnabled);
       dataSet.highlightEnabled = config.highlightEnabled;
@@ -66,10 +68,28 @@ function applyPieDataSetConfig(dataSet: PieChartDataSet, config: PieDataSetConfi
       nchartsLog('[ncharts] Setting valueFont size:', config.valueTextSize);
       dataSet.valueFont = dataSet.valueFont.fontWithSize(config.valueTextSize);
     }
+    const isOutsideSlice = config.xValuePosition === 'OUTSIDE_SLICE' || config.yValuePosition === 'OUTSIDE_SLICE';
     if (config.valueTextColor) {
       nchartsLog('[ncharts] Setting valueTextColor:', config.valueTextColor);
       const textColor = toUIColor(config.valueTextColor);
       if (textColor) dataSet.valueTextColor = textColor;
+    } else if (isOutsideSlice && config.colors?.length) {
+      nchartsLog('[ncharts] Setting valueColors fallback to slice colors:', config.colors);
+      const valueColors = NSMutableArray.alloc().init();
+      for (const c of config.colors) {
+        const color = toUIColor(c);
+        if (color) {
+          valueColors.addObject(color);
+        }
+      }
+      if (valueColors.count > 0) {
+        (dataSet as any).setValueForKey(valueColors, 'valueColors');
+      }
+    } else if (config.color) {
+      const color = toUIColor(config.color);
+      if (color) {
+        dataSet.valueTextColor = color;
+      }
     }
     if (config.visible !== undefined) {
       nchartsLog('[ncharts] Setting visible:', config.visible);
@@ -101,8 +121,11 @@ function applyPieDataSetConfig(dataSet: PieChartDataSet, config: PieDataSetConfi
     }
     if (config.valueLineColor) {
       nchartsLog('[ncharts] Setting valueLineColor:', config.valueLineColor);
+      dataSet.useValueColorForLine = false;
       const lineColor = toUIColor(config.valueLineColor);
       if (lineColor) dataSet.valueLineColor = lineColor;
+    } else {
+      dataSet.useValueColorForLine = true;
     }
     if (config.valueLineWidth !== undefined) {
       nchartsLog('[ncharts] Setting valueLineWidth:', config.valueLineWidth);
@@ -116,6 +139,11 @@ function applyPieDataSetConfig(dataSet: PieChartDataSet, config: PieDataSetConfi
       nchartsLog('[ncharts] Setting valueLineVariableLength:', config.valueLineVariableLength);
       dataSet.valueLineVariableLength = config.valueLineVariableLength;
     }
+    if (config.valueFormatter === 'number' || config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+      const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+      dataSet.valueFormatter = vf;
+      retainedDataObjects.push(vf);
+    }
     nchartsLog('[ncharts] applyPieDataSetConfigIOS END');
   } catch (err) {
     nchartsError('[ncharts] applyPieDataSetConfigIOS ERROR:', err);
@@ -125,6 +153,8 @@ function applyPieDataSetConfig(dataSet: PieChartDataSet, config: PieDataSetConfi
 export class PieChart extends PieChartBase {
   private _native: PieChartView | null = null;
   private _delegate: PieChartViewDelegateImpl | null = null;
+  private _retainedChartObjects: Array<any> = [];
+  private _retainedDataObjects: NSObject[] = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] PieChart.createNativeView()');
@@ -138,7 +168,6 @@ export class PieChart extends PieChartBase {
     super.initNativeView();
 
     const instance = this._native!;
-    instance.highlightPerTapEnabled = this.highlightPerTapEnabled;
 
     // Prevent ghosting during animations
     instance.clipsToBounds = true;
@@ -168,95 +197,26 @@ export class PieChart extends PieChartBase {
     if (this.data) this.applyData();
   }
 
+  disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
+    this._retainedDataObjects.length = 0;
+    this._delegate = null;
+    this._native = null;
+    this._nativeChart = null;
+    super.disposeNativeView();
+  }
+
   private _applyPieChartConfig(): void {
     nchartsLog('[ncharts] PieChart._applyPieChartConfig iOS START');
     const instance = this._native!;
     try {
-      nchartsLog('[ncharts] Setting drawHoleEnabled:', this.drawHole);
-      instance.drawHoleEnabled = this.drawHole;
-
-      nchartsLog('[ncharts] Setting holeRadiusPercent:', this.holeRadius / 100.0);
-      instance.holeRadiusPercent = this.holeRadius / 100.0;
-
-      nchartsLog('[ncharts] Setting transparentCircleRadiusPercent:', this.transparentCircleRadius / 100.0);
-      instance.transparentCircleRadiusPercent = this.transparentCircleRadius / 100.0;
-
-      nchartsLog('[ncharts] Setting holeColor, value:', this.holeColor);
-      const holeUIColor = toUIColor(this.holeColor);
-      nchartsLog('[ncharts] holeUIColor result:', holeUIColor);
-      if (holeUIColor) instance.holeColor = holeUIColor;
-
-      nchartsLog('[ncharts] Setting drawCenterTextEnabled:', this.drawCenterText);
-      instance.drawCenterTextEnabled = this.drawCenterText;
-
-      // Set center text with optional styling (size, color)
-      if (this.centerText) {
-        nchartsLog('[ncharts] Setting centerText:', this.centerText, 'size:', this.centerTextSize, 'color:', this.centerTextColor);
-        if (this.centerTextSize || this.centerTextColor) {
-          // Use NSAttributedString for styled text
-          const attributes = NSMutableDictionary.alloc().init();
-
-          if (this.centerTextSize) {
-            const font = UIFont.systemFontOfSize(this.centerTextSize);
-            attributes.setObjectForKey(font, NSFontAttributeName);
-          }
-
-          if (this.centerTextColor) {
-            const textColor = toUIColor(this.centerTextColor);
-            if (textColor) {
-              attributes.setObjectForKey(textColor, NSForegroundColorAttributeName);
-            }
-          }
-
-          // Add paragraph style for center alignment
-          const paragraphStyle = NSMutableParagraphStyle.alloc().init();
-          paragraphStyle.alignment = NSTextAlignment.Center;
-          attributes.setObjectForKey(paragraphStyle, NSParagraphStyleAttributeName);
-
-          const attributedString = NSAttributedString.alloc().initWithStringAttributes(this.centerText, attributes);
-          instance.centerAttributedText = attributedString;
-        } else {
-          instance.centerText = this.centerText;
-        }
-      }
-
       nchartsLog('[ncharts] Setting drawSlicesUnderHoleEnabled: false');
       instance.drawSlicesUnderHoleEnabled = false;
-
-      // Set entry label (slice text) properties
-      nchartsLog('[ncharts] Setting drawEntryLabelsEnabled:', this.drawSliceText);
-      instance.drawEntryLabelsEnabled = this.drawSliceText;
-
-      if (this.sliceTextSize) {
-        nchartsLog('[ncharts] Setting entryLabelFont size:', this.sliceTextSize);
-        instance.entryLabelFont = UIFont.systemFontOfSize(this.sliceTextSize);
-      }
-
-      if (this.sliceTextColor) {
-        nchartsLog('[ncharts] Setting entryLabelColor:', this.sliceTextColor);
-        const labelColor = toUIColor(this.sliceTextColor);
-        if (labelColor) instance.entryLabelColor = labelColor;
-      }
-
-      nchartsLog('[ncharts] Setting usePercentValuesEnabled:', this.usePercentValues);
-      instance.usePercentValuesEnabled = this.usePercentValues;
-
-      nchartsLog('[ncharts] rotationEnabled value:', this.rotationEnabled, 'type:', typeof this.rotationEnabled);
-      if (this.rotationEnabled !== undefined && this.rotationEnabled !== null) {
-        nchartsLog('[ncharts] Setting rotationEnabled:', this.rotationEnabled);
-        instance.rotationEnabled = this.rotationEnabled;
-      }
 
       nchartsLog('[ncharts] rotationAngle value:', this.rotationAngle, 'type:', typeof this.rotationAngle);
       if (this.rotationAngle !== undefined && this.rotationAngle !== null) {
         nchartsLog('[ncharts] Setting rotationAngle:', this.rotationAngle);
         instance.rotationAngle = this.rotationAngle;
-      }
-
-      nchartsLog('[ncharts] maxAngle value:', this.maxAngle, 'type:', typeof this.maxAngle);
-      if (this.maxAngle !== undefined && this.maxAngle !== null) {
-        nchartsLog('[ncharts] Setting maxAngle:', this.maxAngle);
-        instance.maxAngle = this.maxAngle;
       }
 
       nchartsLog('[ncharts] PieChart._applyPieChartConfig iOS END');
@@ -265,30 +225,151 @@ export class PieChart extends PieChartBase {
     }
   }
 
-  disposeNativeView(): void {
-    this._delegate = null;
-    this._native = null;
-    this._nativeChart = null;
-    super.disposeNativeView();
-  }
-
   get nativeChart(): any {
     return this._native;
   }
 
-  // Property change handlers
-  onDrawHoleChange(): void {
+  private updateCenterText(): void {
     if (!this._native) return;
-    nchartsLog('[ncharts] onDrawHoleChange:', this.drawHole);
-    this._native.drawHoleEnabled = this.drawHole;
+
+    const instance = this._native;
+
+    if (this.centerText) {
+      nchartsLog('[ncharts] Setting centerText:', this.centerText, 'size:', this.centerTextSize, 'color:', this.centerTextColor);
+
+      if (this.centerTextSize || this.centerTextColor) {
+        const attributes = NSMutableDictionary.alloc().init();
+
+        if (this.centerTextSize) {
+          const font = UIFont.systemFontOfSize(this.centerTextSize);
+          attributes.setObjectForKey(font, NSFontAttributeName);
+        }
+
+        if (this.centerTextColor) {
+          const textColor = toUIColor(this.centerTextColor);
+          if (textColor) {
+            attributes.setObjectForKey(textColor, NSForegroundColorAttributeName);
+          }
+        }
+
+        const paragraphStyle = NSMutableParagraphStyle.alloc().init();
+        paragraphStyle.alignment = NSTextAlignment.Center;
+        attributes.setObjectForKey(paragraphStyle, NSParagraphStyleAttributeName);
+
+        const attributedString = NSAttributedString.alloc().initWithStringAttributes(this.centerText, attributes);
+        instance.centerAttributedText = attributedString;
+      } else {
+        instance.centerText = this.centerText;
+      }
+
+      instance.setNeedsDisplay();
+    }
+  }
+
+  // Property change handlers
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsetsWithLeftTopRightBottom(value.left, value.top, value.right, value.bottom);
+      this._native.notifyDataSetChanged();
+      this._native.setNeedsDisplay();
+    }
+  }
+
+  [touchEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.userInteractionEnabled = value;
+    }
+  }
+
+  [highlightPerTapEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.highlightPerTapEnabled = value;
+    }
+  }
+  [drawHoleProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    nchartsLog('[ncharts] onDrawHoleChange:', value);
+    this._native.drawHoleEnabled = value;
     this._native.setNeedsDisplay();
   }
 
-  onHoleRadiusChange(): void {
+  [holeRadiusProperty.setNative](value: number) {
     if (!this._native) return;
-    nchartsLog('[ncharts] onHoleRadiusChange:', this.holeRadius);
-    this._native.holeRadiusPercent = this.holeRadius / 100.0;
-    this._native.transparentCircleRadiusPercent = this.transparentCircleRadius / 100.0;
+    nchartsLog('[ncharts] onHoleRadiusChange:', value);
+    this._native.holeRadiusPercent = value / 100;
+    this._native.setNeedsDisplay();
+  }
+
+  [transparentCircleRadiusProperty.setNative](value: number) {
+    if (!this._native) return;
+    nchartsLog('[ncharts] onTransparentCircleRadius:', value);
+    this._native.transparentCircleRadiusPercent = value / 100;
+    this._native.setNeedsDisplay();
+  }
+
+  [holeColorProperty.setNative](value: ChartColor) {
+    if (!this._native) return;
+    this._native.holeColor = value == null ? undefined : toUIColor(value);
+    this._native.setNeedsDisplay();
+  }
+
+  [transparentCircleColorProperty.setNative](value: ChartColor) {
+    if (!this._native) return;
+    this._native.transparentCircleColor = value == null ? undefined : toUIColor(value);
+    this._native.setNeedsDisplay();
+  }
+
+  [drawCenterTextProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.drawCenterTextEnabled = value;
+    this._native.setNeedsDisplay();
+  }
+
+  [centerTextProperty.setNative](value: any) {
+    this.updateCenterText();
+  }
+
+  [centerTextColorProperty.setNative](value: any) {
+    this.updateCenterText();
+  }
+
+  [centerTextSizeProperty.setNative](value: any) {
+    this.updateCenterText();
+  }
+
+  [drawSliceTextProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.drawEntryLabelsEnabled = value;
+    this._native.setNeedsDisplay();
+  }
+
+  [sliceTextSizeProperty.setNative](value: number) {
+    if (!this._native) return;
+    this._native.entryLabelFont = UIFont.systemFontOfSize(value);
+    this._native.setNeedsDisplay();
+  }
+
+  [sliceTextColorProperty.setNative](value: ChartColor) {
+    if (!this._native) return;
+    this._native.entryLabelColor = value == null ? undefined : toUIColor(value);
+    this._native.setNeedsDisplay();
+  }
+
+  [usePercentValuesProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.usePercentValuesEnabled = value;
+    this._native.setNeedsDisplay();
+  }
+
+  [rotationEnabledProperty.setNative](value: boolean) {
+    if (!this._native) return;
+    this._native.rotationEnabled = value;
+    this._native.setNeedsDisplay();
+  }
+
+  [maxAngleProperty.setNative](value: number) {
+    if (!this._native) return;
+    this._native.maxAngle = value;
     this._native.setNeedsDisplay();
   }
 
@@ -322,6 +403,9 @@ export class PieChart extends PieChartBase {
       nchartsLog('[ncharts] Clearing layer contents');
       instance.layer.contents = null;
 
+      // clear any retained data objects / formatters
+      this._retainedDataObjects.length = 0;
+
       // Build the data sets (pie chart typically has one dataset)
       nchartsLog('[ncharts] Processing dataSets, count:', this.data!.dataSets.length);
       for (const ds of this.data!.dataSets) {
@@ -345,7 +429,7 @@ export class PieChart extends PieChartBase {
 
         if (ds.config) {
           nchartsLog('[ncharts] Applying dataSet config');
-          applyPieDataSetConfig(dataSet, ds.config);
+          applyPieDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
         }
 
         nchartsLog('[ncharts] Creating PieChartData');
@@ -358,6 +442,9 @@ export class PieChart extends PieChartBase {
 
       nchartsLog('[ncharts] Calling notifyDataSetChanged');
       instance.notifyDataSetChanged();
+      // data and animation properties cannot be set in a guranteed order
+      // hence after each data update an animation needs to be executed
+      if (this.animation) this._applyAnimation(this.animation);
       nchartsLog('[ncharts] PieChart._applyDataIOS END');
     } catch (err) {
       nchartsError('[ncharts] PieChart._applyDataIOS ERROR:', err);
@@ -414,7 +501,7 @@ export class PieChart extends PieChartBase {
     applyLegendIOS(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisIOS(this._native, xAxis);
+    applyXAxisIOS(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionIOS(this._native, description);

@@ -1,7 +1,9 @@
 import { View, Property, Color, CSSType } from '@nativescript/core';
-import type { ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, YAxisConfig, ChartDescription, MarkerConfig, Highlight, LineChartData, BarChartData, PieChartData, ScatterChartData, BubbleChartData, CandleChartData, RadarChartData, CombinedChartData, ChartColor } from './types';
+import type { ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, YAxisConfig, ChartDescription, MarkerConfig, Highlight, LineChartData, BarChartData, PieChartData, ScatterChartData, BubbleChartData, CandleChartData, RadarChartData, CombinedChartData, DrawOrderCombinedChart, ChartColor, ViewPortOffset } from './types';
 
 export * from './types';
+export type MarkerFactory = (chartView: any, cfg: MarkerConfig) => any;
+export type { PageEventData } from './charts/chart-paging-detector/chart-paging-detector';
 
 /**
  * Global configuration for @nstudio/ncharts
@@ -13,6 +15,48 @@ export class NCharts {
    * @default false
    */
   static debug: boolean = false;
+
+  /** User defined marker factories */
+  private static _markerFactories = new Map<string, MarkerFactory>();
+
+  /**
+   * Register a marker factory for custom markers.
+   *
+   * Example: register a marker from main.ts (see NChartsDefaultMarker in this repo)
+   *
+   * ```ts
+   * import { NCharts } from '@nstudio/ncharts';
+   * import { NChartsCustomMarker } from './custom';
+   *
+   * NCharts.registerMarkerFactory('custom-marker', (chartView, cfg) => {
+   *   return NChartsCustomMarker.create(chartView, cfg);
+   * });
+   *
+   * // chart config
+   * marker: {
+   *   enabled: true,
+   *   markerId: 'custom-marker',
+   *   markerCustomData: { /* your payload *\/ }
+   * }
+   * ```
+   */
+  static registerMarkerFactory(markerId: string, factory: MarkerFactory): void {
+    if (!markerId || typeof factory !== 'function') {
+      nchartsError('[ncharts] markerId is required and factory must be a function');
+      return;
+    }
+    NCharts._markerFactories.set(markerId, factory);
+  }
+
+  /** Unregister a previously registered marker factory. */
+  static unregisterMarkerFactory(markerId: string): void {
+    NCharts._markerFactories.delete(markerId);
+  }
+
+  /** @internal */
+  static _getMarkerFactory(markerId?: string): MarkerFactory | undefined {
+    return markerId ? NCharts._markerFactories.get(markerId) : undefined;
+  }
 }
 
 /**
@@ -118,6 +162,9 @@ export abstract class ChartViewBase extends View {
 
   /** Gesture event name */
   public static gestureEvent = 'gesture';
+
+  /** Page event name */
+  public static pageEvent = 'page';
 
   /**
    * Get the native chart instance
@@ -264,6 +311,9 @@ export abstract class BarLineChartViewBase extends ChartViewBase {
 
   /** Enable double tap zoom */
   public doubleTapToZoomEnabled: boolean = true;
+
+  /** Extra offsets */
+  public extraOffsets: ViewPortOffset = undefined;
 
   /** Y-axis configuration */
   public yAxis: YAxisConfigDual | undefined;
@@ -476,6 +526,7 @@ export abstract class CombinedChartBase extends BarLineChartViewBase {
   public data: CombinedChartData | undefined;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
 // Data property for all chart types
 export const dataProperty = new Property<ChartViewBase, any>({
   name: 'data',
@@ -514,15 +565,6 @@ export const xAxisProperty = new Property<ChartViewBase, XAxisConfig>({
 });
 xAxisProperty.register(ChartViewBase);
 
-// YAxis property for BarLine charts
-export const yAxisProperty = new Property<BarLineChartViewBase, YAxisConfigDual>({
-  name: 'yAxis',
-  valueChanged(target, oldValue, newValue) {
-    (target as any).onYAxisChange();
-  },
-});
-yAxisProperty.register(BarLineChartViewBase);
-
 // Description property
 export const chartDescriptionProperty = new Property<ChartViewBase, ChartDescription>({
   name: 'chartDescription',
@@ -550,14 +592,78 @@ export const highlightsProperty = new Property<ChartViewBase, Highlight[]>({
 });
 highlightsProperty.register(ChartViewBase);
 
+// touchEnabled property
+export const touchEnabledProperty = new Property<ChartViewBase, boolean>({
+  name: 'touchEnabled',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+touchEnabledProperty.register(ChartViewBase);
+
+// highlightPerTapEnabled property
+export const highlightPerTapEnabledProperty = new Property<ChartViewBase, boolean>({
+  name: 'highlightPerTapEnabled',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+highlightPerTapEnabledProperty.register(ChartViewBase);
+
+// extraOffsets property
+export const extraOffsetsProperty = new Property<ChartViewBase, ViewPortOffset>({
+  name: 'extraOffsets',
+  defaultValue: null,
+  affectsLayout: false,
+});
+extraOffsetsProperty.register(ChartViewBase);
+
+////////////////////////////////////////////////////////////////////////////////////////
+// YAxis property
+export const yAxisProperty = new Property<BarLineChartViewBase, YAxisConfigDual>({
+  name: 'yAxis',
+  valueChanged(target, oldValue, newValue) {
+    (target as any).onYAxisChange();
+  },
+});
+yAxisProperty.register(BarLineChartViewBase);
+
+// Drag enabled property
+export const dragEnabledProperty = new Property<BarLineChartViewBase, boolean>({
+  name: 'dragEnabled',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+dragEnabledProperty.register(BarLineChartViewBase);
+
+// Scale enabled property
+export const scaleEnabledProperty = new Property<BarLineChartViewBase, boolean>({
+  name: 'scaleEnabled',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+scaleEnabledProperty.register(BarLineChartViewBase);
+
+// Pinch zoom property
+export const pinchZoomProperty = new Property<BarLineChartViewBase, boolean>({
+  name: 'pinchZoom',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+pinchZoomProperty.register(BarLineChartViewBase);
+
+// Highlight per drag property
+export const highlightPerDragEnabledProperty = new Property<BarLineChartViewBase, boolean>({
+  name: 'highlightPerDragEnabled',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+highlightPerDragEnabledProperty.register(BarLineChartViewBase);
+
+////////////////////////////////////////////////////////////////////////////////////////
 // Pie Chart specific properties
 export const drawHoleProperty = new Property<PieChartBase, boolean>({
   name: 'drawHole',
   defaultValue: true,
   valueConverter: (v) => String(v) === 'true',
-  valueChanged(target, oldValue, newValue) {
-    (target as any).onDrawHoleChange?.();
-  },
 });
 drawHoleProperty.register(PieChartBase);
 
@@ -565,11 +671,100 @@ export const holeRadiusProperty = new Property<PieChartBase, number>({
   name: 'holeRadius',
   defaultValue: 50,
   valueConverter: (v) => parseFloat(v),
-  valueChanged(target, oldValue, newValue) {
-    (target as any).onHoleRadiusChange?.();
-  },
 });
 holeRadiusProperty.register(PieChartBase);
+
+export const transparentCircleRadiusProperty = new Property<PieChartBase, number>({
+  name: 'transparentCircleRadius',
+  defaultValue: 55,
+  valueConverter: (v) => parseFloat(v),
+});
+transparentCircleRadiusProperty.register(PieChartBase);
+
+export const holeColorProperty = new Property<PieChartBase, ChartColor>({
+  name: 'holeColor',
+  defaultValue: undefined,
+  valueConverter: (v) => v,
+});
+holeColorProperty.register(PieChartBase);
+
+export const transparentCircleColorProperty = new Property<PieChartBase, ChartColor>({
+  name: 'transparentCircleColor',
+  defaultValue: undefined,
+  valueConverter: (v) => v,
+});
+transparentCircleColorProperty.register(PieChartBase);
+
+export const drawCenterTextProperty = new Property<PieChartBase, boolean>({
+  name: 'drawCenterText',
+  defaultValue: false,
+  valueConverter: (v) => String(v) === 'true',
+});
+drawCenterTextProperty.register(PieChartBase);
+
+export const centerTextProperty = new Property<PieChartBase, string>({
+  name: 'centerText',
+  defaultValue: '',
+  valueConverter: (v) => v,
+});
+centerTextProperty.register(PieChartBase);
+
+export const centerTextColorProperty = new Property<PieChartBase, ChartColor>({
+  name: 'centerTextColor',
+  defaultValue: undefined,
+  valueConverter: (v) => v,
+});
+centerTextColorProperty.register(PieChartBase);
+
+export const centerTextSizeProperty = new Property<PieChartBase, number>({
+  name: 'centerTextSize',
+  defaultValue: 12,
+  valueConverter: (v) => parseFloat(v),
+});
+centerTextSizeProperty.register(PieChartBase);
+
+export const drawSliceTextProperty = new Property<PieChartBase, boolean>({
+  name: 'drawSliceText',
+  defaultValue: false,
+  valueConverter: (v) => String(v) === 'true',
+});
+drawSliceTextProperty.register(PieChartBase);
+
+export const sliceTextSizeProperty = new Property<PieChartBase, number>({
+  name: 'sliceTextSize',
+  defaultValue: 13,
+  valueConverter: (v) => parseFloat(v),
+});
+sliceTextSizeProperty.register(PieChartBase);
+
+export const sliceTextColorProperty = new Property<PieChartBase, ChartColor>({
+  name: 'sliceTextColor',
+  defaultValue: undefined,
+  valueConverter: (v) => v,
+});
+sliceTextColorProperty.register(PieChartBase);
+
+export const usePercentValuesProperty = new Property<PieChartBase, boolean>({
+  name: 'usePercentValues',
+  defaultValue: false,
+  valueConverter: (v) => String(v) === 'true',
+});
+usePercentValuesProperty.register(PieChartBase);
+
+export const maxAngleProperty = new Property<PieChartBase, number>({
+  name: 'maxAngle',
+  defaultValue: 360,
+  valueConverter: (v) => parseFloat(v),
+});
+maxAngleProperty.register(PieChartBase);
+
+////////////////////////////////////////////////////////////////////////////////////////
+export const rotationEnabledProperty = new Property<PieRadarChartViewBase, boolean>({
+  name: 'rotationEnabled',
+  defaultValue: true,
+  valueConverter: (v) => String(v) === 'true',
+});
+rotationEnabledProperty.register(PieRadarChartViewBase);
 
 export const rotationAngleProperty = new Property<PieRadarChartViewBase, number>({
   name: 'rotationAngle',

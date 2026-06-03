@@ -1,11 +1,15 @@
 /**
  * CombinedChart - Android Implementation
  */
-import { CombinedChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, LineDataSetConfig, BarDataSetConfig, ScatterDataSetConfig, BubbleDataSetConfig, CandleDataSetConfig, CombinedChartData, nchartsLog, nchartsError } from '../common';
+import { CombinedChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, LineDataSetConfig, BarDataSetConfig, ScatterDataSetConfig, BubbleDataSetConfig, CandleDataSetConfig, CombinedChartData, nchartsLog, nchartsError, DrawOrderCombinedChart, ViewPortOffset, extraOffsetsProperty, animationProperty, touchEnabledProperty, dragEnabledProperty, scaleEnabledProperty, pinchZoomProperty, highlightPerDragEnabledProperty, highlightPerTapEnabledProperty } from '../common';
 import { toAndroidColor } from './utils';
-import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
+import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid, applyMarkerAndroid } from './style-helpers.android';
+import { NSCustomLabelsArrayFormatter } from './formatters/custom-labels-array-formatter.android';
+import { NSCombinedChartRenderer } from './renderers/combined-chart-renderer.android';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.android';
+import { ChartPagingDetector } from './chart-paging-detector/chart-paging-detector';
 
-function applyLineDataSetConfig(dataSet: com.github.mikephil.charting.data.LineDataSet, config: LineDataSetConfig): void {
+function applyLineDataSetConfig(dataSet: com.github.mikephil.charting.data.LineDataSet, config: LineDataSetConfig, retainedDataObjects: com.github.mikephil.charting.formatter.ValueFormatter[]): void {
   if (!dataSet || !config) return;
 
   if (config.color) {
@@ -70,9 +74,18 @@ function applyLineDataSetConfig(dataSet: com.github.mikephil.charting.data.LineD
     }
   }
   if (config.drawCubicIntensity !== undefined) dataSet.setCubicIntensity(config.drawCubicIntensity);
+  if (config.valueFormatter === 'number') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.setValueFormatter(vf);
+    retainedDataObjects.push(vf);
+  } else if (Array.isArray(config.valueFormatter)) {
+    const vf = new NSCustomLabelsArrayFormatter(config.valueFormatter);
+    dataSet.setValueFormatter(vf);
+    retainedDataObjects.push(vf);
+  }
 }
 
-function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDataSet, config: BarDataSetConfig): void {
+function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDataSet, config: BarDataSetConfig, retainedDataObjects: com.github.mikephil.charting.formatter.ValueFormatter[]): void {
   if (!dataSet || !config) return;
 
   if (config.color) {
@@ -87,6 +100,9 @@ function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDat
     });
     dataSet.setColors(colors);
   }
+  if (config.axisDependency) {
+    dataSet.setAxisDependency(config.axisDependency === 'RIGHT' ? com.github.mikephil.charting.components.YAxis.AxisDependency.RIGHT : com.github.mikephil.charting.components.YAxis.AxisDependency.LEFT);
+  }
   if (config.highlightEnabled !== undefined) dataSet.setHighlightEnabled(config.highlightEnabled);
   if (config.drawValues !== undefined) dataSet.setDrawValues(config.drawValues);
   if (config.valueTextSize !== undefined) dataSet.setValueTextSize(config.valueTextSize);
@@ -100,6 +116,18 @@ function applyBarDataSetConfig(dataSet: com.github.mikephil.charting.data.BarDat
     if (color !== undefined) dataSet.setHighLightColor(color);
   }
   if (config.highlightAlpha !== undefined) dataSet.setHighLightAlpha(Math.round(config.highlightAlpha));
+  if (config.barBorderWidth !== undefined) {
+    dataSet.setBarBorderWidth(config.barBorderWidth);
+  }
+  if (config.barBorderColor) {
+    const color = toAndroidColor(config.barBorderColor);
+    if (color !== undefined) dataSet.setBarBorderColor(color);
+  }
+  if (config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.setValueFormatter(vf);
+    retainedDataObjects.push(vf);
+  }
 }
 
 function applyScatterDataSetConfig(dataSet: com.github.mikephil.charting.data.ScatterDataSet, config: ScatterDataSetConfig): void {
@@ -245,6 +273,10 @@ function applyCandleDataSetConfig(dataSet: com.github.mikephil.charting.data.Can
 export class CombinedChart extends CombinedChartBase {
   private _native: com.github.mikephil.charting.charts.CombinedChart | null = null;
   private _selectionListener: com.github.mikephil.charting.listener.OnChartValueSelectedListener | null = null;
+  private _combinedRenderer: NSCombinedChartRenderer | null = null;
+  private _pageDetector: ChartPagingDetector | null = null;
+  private _retainedChartObjects: Array<any> = [];
+  private _retainedDataObjects: com.github.mikephil.charting.formatter.ValueFormatter[] = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] CombinedChart.createNativeView()');
@@ -258,13 +290,19 @@ export class CombinedChart extends CombinedChartBase {
     super.initNativeView();
 
     const instance = this._native!;
-    instance.setHighlightPerTapEnabled(this.highlightPerTapEnabled);
     if (this.chartBackgroundColor) {
       const color = toAndroidColor(this.chartBackgroundColor);
       if (color !== undefined) instance.setBackgroundColor(color);
     }
     if (this.noDataText) instance.setNoDataText(this.noDataText);
     applyNoDataTextColorAndroid(instance, this.noDataTextColor);
+
+    // angular directive does not await presence of native chart, hence setup needs to happen here
+    if (this.touchEnabled !== undefined) instance.setTouchEnabled(this.touchEnabled);
+    if (this.dragEnabled !== undefined) instance.setDragEnabled(this.dragEnabled);
+    if (this.scaleEnabled !== undefined) instance.setScaleEnabled(this.scaleEnabled);
+    if (this.pinchZoom !== undefined) instance.setPinchZoom(this.pinchZoom);
+    if (this.highlightPerDragEnabled !== undefined) instance.setHighlightPerDragEnabled(this.highlightPerDragEnabled);
 
     // Set up selection listener
     const owner = new WeakRef(this);
@@ -291,15 +329,34 @@ export class CombinedChart extends CombinedChartBase {
     });
     instance.setOnChartValueSelectedListener(this._selectionListener);
 
+    // Set up page change detector
+    this._pageDetector = new ChartPagingDetector(
+      this,
+      async (dir, info) => {
+        this.notify({
+          eventName: CombinedChart.pageEvent,
+          object: this,
+          dir,
+          info,
+        });
+      },
+      { idleMs: 160, edgeRatio: 0.08, cooldownMs: 500, pagingMaxScaleX: 1, pagingMaxScaleY: 1 },
+    );
+
     if (this.legend) this._applyLegend(this.legend);
     if (this.xAxis) this._applyXAxis(this.xAxis);
     if ((this as any).yAxis) this._applyYAxis((this as any).yAxis);
     if (this.chartDescription) this._applyDescription(this.chartDescription);
-
     if (this.data) this.applyData();
   }
 
   disposeNativeView(): void {
+    this._pageDetector?.detach();
+    this._pageDetector = null;
+    this._combinedRenderer?.detach();
+    this._combinedRenderer = null;
+    this._retainedChartObjects.length = 0;
+    this._retainedDataObjects.length = 0;
     this._selectionListener = null;
     this._native = null;
     this._nativeChart = null;
@@ -316,6 +373,23 @@ export class CombinedChart extends CombinedChartBase {
     nchartsLog('[ncharts] CombinedChart._applyDataAndroid called');
     const instance = this._native;
 
+    // remove retained data objects
+    this._retainedDataObjects.length = 0;
+
+    // Setup of non-default draw order, order matters (before setting data)
+    if ((this.data as CombinedChartData)?.drawOrder) {
+      const order: Array<DrawOrderCombinedChart> = this.data.drawOrder;
+
+      const toAndroidDrawOrder = (value: DrawOrderCombinedChart) => com.github.mikephil.charting.charts.CombinedChart.DrawOrder[value];
+
+      const orderArray = java.lang.reflect.Array.newInstance(com.github.mikephil.charting.charts.CombinedChart.DrawOrder.class, order.length) as androidNative.Array<com.github.mikephil.charting.charts.CombinedChart.DrawOrder>;
+
+      for (let i = 0; i < order.length; i++) {
+        orderArray[i] = toAndroidDrawOrder(order[i]);
+      }
+      instance.setDrawOrder(orderArray);
+    }
+
     const combinedData = new com.github.mikephil.charting.data.CombinedData();
 
     // Line data
@@ -325,15 +399,21 @@ export class CombinedChart extends CombinedChartBase {
         const entries = new java.util.ArrayList<com.github.mikephil.charting.data.Entry>();
         ds.values.forEach((value: any, index: number) => {
           let entry: com.github.mikephil.charting.data.Entry;
+
           if (typeof value === 'number') {
             entry = new com.github.mikephil.charting.data.Entry(index, value);
           } else {
-            entry = new com.github.mikephil.charting.data.Entry(value.x ?? index, value.y);
+            const x = value.x ?? index;
+            if (!value.marker) {
+              entry = new com.github.mikephil.charting.data.Entry(x, value.y);
+            } else {
+              entry = new com.github.mikephil.charting.data.Entry(x, value.y, value.marker);
+            }
           }
           entries.add(entry);
         });
         const dataSet = new com.github.mikephil.charting.data.LineDataSet(entries, ds.label);
-        if (ds.config) applyLineDataSetConfig(dataSet, ds.config);
+        if (ds.config) applyLineDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
         lineDataSets.add(dataSet);
       }
       const lineData = new com.github.mikephil.charting.data.LineData(lineDataSets);
@@ -350,14 +430,27 @@ export class CombinedChart extends CombinedChartBase {
           if (typeof value === 'number') {
             entry = new com.github.mikephil.charting.data.BarEntry(index, value);
           } else if (Array.isArray(value.y)) {
-            entry = new com.github.mikephil.charting.data.BarEntry(value.x ?? index, value.y);
+            const x = value.x ?? index;
+            const stack = Array.create('float', value.y.length);
+            for (let i = 0; i < value.y.length; i++) {
+              stack[i] = value.y[i];
+            }
+            if (!value.marker) {
+              entry = new com.github.mikephil.charting.data.BarEntry(x, stack);
+            } else {
+              entry = new com.github.mikephil.charting.data.BarEntry(x, stack, value.marker);
+            }
           } else {
-            entry = new com.github.mikephil.charting.data.BarEntry(value.x ?? index, value.y);
+            if (!value.marker) {
+              entry = new com.github.mikephil.charting.data.BarEntry(value.x ?? index, value.y);
+            } else {
+              entry = new com.github.mikephil.charting.data.BarEntry(value.x ?? index, value.y, value.marker);
+            }
           }
           entries.add(entry);
         });
         const dataSet = new com.github.mikephil.charting.data.BarDataSet(entries, ds.label);
-        if (ds.config) applyBarDataSetConfig(dataSet, ds.config);
+        if (ds.config) applyBarDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
         barDataSets.add(dataSet);
       }
       const barData = new com.github.mikephil.charting.data.BarData(barDataSets);
@@ -423,8 +516,28 @@ export class CombinedChart extends CombinedChartBase {
       combinedData.setData(candleData);
     }
 
+    // install custom renderer if needed
+    this._updateCustomRenderer();
+
     instance.setData(combinedData);
     instance.invalidate();
+
+    // data and animation properties cannot be set in a guranteed order
+    // hence after each data update an animation needs to be executed
+    if (this.animation) this._applyAnimation(this.animation);
+  }
+
+  private _updateCustomRenderer() {
+    const barConfigs = this.data?.barData?.dataSets?.map((ds) => ds.config).filter(Boolean) ?? [];
+    const needsCustomRenderer = this.yAxis?.plotBands?.length || barConfigs.some((cfg) => cfg?.drawValuesInside);
+    if (!needsCustomRenderer) {
+      this._combinedRenderer?.detach();
+      this._combinedRenderer = null;
+    } else {
+      this._combinedRenderer?.detach();
+      this._combinedRenderer = NSCombinedChartRenderer.create(this._native, barConfigs, this.yAxis?.plotBands);
+      this._native.notifyDataSetChanged();
+    }
   }
 
   protected _applyAnimation(animation: ChartAnimation): void {
@@ -466,18 +579,63 @@ export class CombinedChart extends CombinedChartBase {
     applyLegendAndroid(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisAndroid(this._native, xAxis);
+    applyXAxisAndroid(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: any): void {
-    applyYAxisDualAndroid(this._native, yAxis);
+    applyYAxisDualAndroid(this._native, yAxis, this._retainedChartObjects);
+    this._updateCustomRenderer();
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionAndroid(this._native, description);
   }
-  protected _applyMarker(marker: MarkerConfig): void {}
+  protected _applyMarker(marker: MarkerConfig): void {
+    applyMarkerAndroid(this._native, marker, this._retainedChartObjects);
+  }
   protected _moveViewToX(xValue: number): void {}
   protected _moveViewTo(xValue: number, yValue: number, axisDependency: string): void {}
   protected _centerViewTo(xValue: number, yValue: number, axisDependency: string): void {}
   protected _zoom(scaleX: number, scaleY: number, x: number, y: number): void {}
   protected _fitScreen(): void {}
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsets(value.left, value.top, value.right, value.bottom);
+      this._native.invalidate();
+    }
+  }
+  [touchEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setTouchEnabled(value);
+    }
+  }
+
+  [dragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setDragEnabled(value);
+    }
+  }
+
+  [scaleEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setScaleEnabled(value);
+    }
+  }
+
+  [pinchZoomProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setPinchZoom(value);
+    }
+  }
+
+  [highlightPerDragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setHighlightPerDragEnabled(value);
+    }
+  }
+
+  [highlightPerTapEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setHighlightPerTapEnabled(value);
+    }
+  }
 }

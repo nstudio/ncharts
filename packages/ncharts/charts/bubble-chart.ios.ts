@@ -1,7 +1,7 @@
 /**
  * BubbleChart - iOS Implementation
  */
-import { BubbleChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BubbleDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { BubbleChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BubbleDataSetConfig, nchartsLog, nchartsError, animationProperty, extraOffsetsProperty, ViewPortOffset } from '../common';
 import { toUIColor, parseEasingIOS } from './utils';
 import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS } from './style-helpers.ios';
 
@@ -41,20 +41,17 @@ class BubbleChartViewDelegateImpl extends NSObject implements ChartViewDelegate 
 function applyBubbleDataSetConfig(dataSet: BubbleChartDataSet, config: BubbleDataSetConfig): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
   }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
-  }
+
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
   if (config.valueTextSize !== undefined) dataSet.valueFont = dataSet.valueFont.fontWithSize(config.valueTextSize);
@@ -69,6 +66,7 @@ function applyBubbleDataSetConfig(dataSet: BubbleChartDataSet, config: BubbleDat
 export class BubbleChart extends BubbleChartBase {
   private _native: BubbleChartView | null = null;
   private _delegate: BubbleChartViewDelegateImpl | null = null;
+  private _retainedChartObjects: Array<any> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] BubbleChart.createNativeView()');
@@ -119,6 +117,7 @@ export class BubbleChart extends BubbleChartBase {
   }
 
   disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
     this._delegate = null;
     this._native = null;
     this._nativeChart = null;
@@ -225,10 +224,10 @@ export class BubbleChart extends BubbleChartBase {
     applyLegendIOS(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisIOS(this._native, xAxis);
+    applyXAxisIOS(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    applyYAxisDualIOS(this._native, yAxis);
+    applyYAxisDualIOS(this._native, yAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionIOS(this._native, description);
@@ -256,5 +255,13 @@ export class BubbleChart extends BubbleChartBase {
 
   protected _fitScreen(): void {
     this._native?.fitScreen();
+  }
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsetsWithLeftTopRightBottom(value.left, value.top, value.right, value.bottom);
+      this._native.notifyDataSetChanged();
+      this._native.setNeedsDisplay();
+    }
   }
 }

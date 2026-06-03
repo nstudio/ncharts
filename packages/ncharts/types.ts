@@ -95,6 +95,8 @@ export interface LegendConfig {
 // ============================================================================
 
 export interface ChartDescription {
+  /** Enable ChartDescription */
+  enabled?: boolean;
   /** Description text */
   text?: string;
   /** Text color */
@@ -122,6 +124,14 @@ export interface MarkerConfig {
   textColor?: ChartColor;
   /** Text size in dp/pt */
   textSize?: number;
+  /** border width of the marker */
+  borderWidth?: number;
+  /** border color of the marker */
+  borderColor?: ChartColor;
+  /** the markerId can be used to register and configure custom markers via the marker factory */
+  markerId?: string;
+  /** payload forwarded to custom markers via the marker factory */
+  markerCustomData?: unknown;
 }
 
 // ============================================================================
@@ -231,9 +241,11 @@ export interface AxisBase {
   /** Centered axis labels */
   centerAxisLabels?: boolean;
   /** Value formatter type */
-  valueFormatter?: 'largeValue' | 'percent' | 'date' | 'labelByXValue' | string | string[];
+  valueFormatter?: 'largeValue' | 'percent' | 'suffix' | 'date' | 'labelByXValue' | string | string[];
   /** Value formatter pattern (for date) */
   valueFormatterPattern?: string;
+  /** Optional JS function expression (y:number) => number applied before value formatting */
+  valueFormatterTransformExpression?: string;
   /** Label rotation angle in degrees */
   labelRotationAngle?: number;
   /** Avoid first label clipping */
@@ -261,6 +273,7 @@ export interface YAxisConfig extends AxisBase {
 export interface YAxisConfigDual {
   left?: YAxisConfig;
   right?: YAxisConfig;
+  plotBands?: PlotBandConfig[];
 }
 
 // ============================================================================
@@ -310,7 +323,7 @@ export interface DataSetConfigCommon {
   /** Visibility */
   visible?: boolean;
   /** Value formatter */
-  valueFormatter?: 'largeValue' | 'percent' | 'date' | 'labelByXValue' | string | string[];
+  valueFormatter?: 'largeValue' | 'percent' | 'date' | 'number' | 'labelByXValue' | string | string[];
   /** Value formatter pattern */
   valueFormatterPattern?: string;
   /** Labels for x values */
@@ -359,6 +372,47 @@ export interface DataSetConfigLineRadar extends DataSetConfigLineScatterCandleRa
 // ============================================================================
 
 export type LineChartMode = 'LINEAR' | 'STEPPED' | 'CUBIC_BEZIER' | 'HORIZONTAL_BEZIER';
+export type PlotBandHorizontalAlignment = 'LEFT' | 'CENTER' | 'RIGHT';
+export type PlotBandVerticalAlignment = 'TOP' | 'MIDDLE' | 'BOTTOM';
+
+export interface PlotBandTextConfig {
+  /** Text drawn inside the plot band */
+  text?: string;
+  /** Text color */
+  textColor?: string;
+  /** Text size */
+  textSize?: number;
+  /** Font family / font name */
+  textFont?: string;
+  /** Text rotation angle in degrees (clockwise) */
+  textRotationAngle?: number;
+  /** Text alignment within the band */
+  align?: {
+    /** Horizontal text alignment (default LEFT) */
+    horizontal?: PlotBandHorizontalAlignment;
+    /** Vertical text alignment (default TOP) */
+    vertical?: PlotBandVerticalAlignment;
+  };
+  /** Text offsets applied after alignment */
+  textOffsets?: Partial<ViewPortOffset>;
+  /** Whether the text should be drawn above chart data. Default: false */
+  textAboveData?: boolean;
+}
+
+export interface PlotBandConfig {
+  /** Lower bound (axis value) */
+  from?: number;
+  /** Upper bound (axis value) */
+  to?: number;
+  /** Band fill color */
+  fillColor?: string;
+  /** Band alpha (0..255) */
+  fillAlpha?: number;
+  /** reference axis */
+  axis?: 'LEFT' | 'RIGHT';
+  /** Optional text drawn inside the band */
+  text?: PlotBandTextConfig;
+}
 
 export interface LineDataSetConfig extends DataSetConfigLineRadar {
   /** Circle radius at data points */
@@ -421,6 +475,16 @@ export interface BarDataSetConfig extends DataSetConfigBarLineScatterCandleBubbl
   highlightAlpha?: number;
   /** Labels for stacked bars */
   stackLabels?: string[];
+  /** force labels to be drawn inside of the bar or not at all if no space */
+  drawValuesInside?: boolean;
+  /** left/right padding */
+  drawValuesInsidePaddingX?: number;
+  /** top/bottom padding */
+  drawValuesInsidePaddingY?: number;
+  /** width of the bar border */
+  barBorderWidth?: number;
+  /** color of the bar border */
+  barBorderColor?: ChartColor;
 }
 
 export interface BarDataEntry {
@@ -620,12 +684,15 @@ export interface RadarChartData {
 // Combined Chart Types
 // ============================================================================
 
+export type DrawOrderCombinedChart = 'BAR' | 'BUBBLE' | 'LINE' | 'CANDLE' | 'SCATTER';
+
 export interface CombinedChartData {
   lineData?: LineChartData;
   barData?: BarChartData;
   scatterData?: ScatterChartData;
   candleData?: CandleChartData;
   bubbleData?: BubbleChartData;
+  drawOrder?: DrawOrderCombinedChart[];
 }
 
 // ============================================================================
@@ -736,7 +803,7 @@ export interface BarLineChartBaseConfig extends ChartBaseConfig {
   /** View port offsets */
   viewPortOffsets?: ViewPortOffset;
   /** Extra offsets */
-  extraOffsets?: ViewPortOffset;
+  extraViewportOffsets?: ViewPortOffset;
   /** Group identifier for synced charts */
   group?: string;
   /** Chart identifier within group */

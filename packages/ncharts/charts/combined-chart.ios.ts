@@ -1,9 +1,13 @@
 /**
  * CombinedChart - iOS Implementation
  */
-import { CombinedChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, LineDataSetConfig, BarDataSetConfig, ScatterDataSetConfig, BubbleDataSetConfig, CandleDataSetConfig, CombinedChartData, nchartsLog, nchartsError } from '../common';
+import { CombinedChartBase, ChartAnimation, LegendConfig, XAxisConfig, ChartDescription, MarkerConfig, Highlight, LineDataSetConfig, BarDataSetConfig, ScatterDataSetConfig, BubbleDataSetConfig, CandleDataSetConfig, CombinedChartData, nchartsLog, nchartsError, DrawOrderCombinedChart, ViewPortOffset, extraOffsetsProperty, animationProperty, touchEnabledProperty, dragEnabledProperty, scaleEnabledProperty, pinchZoomProperty, highlightPerDragEnabledProperty, highlightPerTapEnabledProperty } from '../common';
 import { toUIColor, parseEasingIOS, parseLineChartModeIOS, parseScatterShapeIOS } from './utils';
-import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS } from './style-helpers.ios';
+import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS, applyMarkerIOS } from './style-helpers.ios';
+import { NSCustomValueLabelsArrayChartValueFormatter } from './formatters/custom-labels-array-formatter.ios';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.ios';
+import { NSCombinedChartRenderer } from './renderers/combined-chart-renderer.ios';
+import { ChartPagingDetector } from './chart-paging-detector/chart-paging-detector';
 
 @NativeClass()
 class CombinedChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
@@ -36,25 +40,27 @@ class CombinedChartViewDelegateImpl extends NSObject implements ChartViewDelegat
       owner.notify({ eventName: CombinedChart.deselectEvent, object: owner });
     }
   }
+
+  chartScaledScaleXScaleY(chartView: ChartViewBase, scaleX: number, scaleY: number): void {
+    const owner = this._owner?.deref() as any;
+    owner?._pageDetector?.handleScaled();
+  }
 }
 
-function applyLineDataSetConfig(dataSet: LineChartDataSet, config: LineDataSetConfig): void {
+function applyLineDataSetConfig(dataSet: LineChartDataSet, config: LineDataSetConfig, retainedDataObjects: NSObject[]): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
   }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
-  }
+
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
   if (config.valueTextSize !== undefined) dataSet.valueFont = dataSet.valueFont.fontWithSize(config.valueTextSize);
@@ -75,24 +81,33 @@ function applyLineDataSetConfig(dataSet: LineChartDataSet, config: LineDataSetCo
   if (config.drawFilled !== undefined) dataSet.drawFilledEnabled = config.drawFilled;
   if (config.mode !== undefined) dataSet.mode = parseLineChartModeIOS(config.mode);
   if (config.drawCubicIntensity !== undefined) dataSet.cubicIntensity = config.drawCubicIntensity;
+  if (config?.valueFormatter === 'number') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.valueFormatter = vf;
+    retainedDataObjects.push(vf);
+  } else if (Array.isArray(config.valueFormatter)) {
+    const vf = NSCustomValueLabelsArrayChartValueFormatter.initWithLabels(config.valueFormatter);
+    dataSet.valueFormatter = vf;
+    retainedDataObjects.push(vf);
+  }
 }
 
-function applyBarDataSetConfig(dataSet: BarChartDataSet, config: BarDataSetConfig): void {
+function applyBarDataSetConfig(dataSet: BarChartDataSet, config: BarDataSetConfig, retainedDataObjects: NSObject[]): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
   }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
+
+  if (config.axisDependency) {
+    (dataSet as any).setValueForKey(config.axisDependency === 'RIGHT' ? AxisDependency.Right : AxisDependency.Left, 'axisDependency');
   }
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
@@ -101,24 +116,27 @@ function applyBarDataSetConfig(dataSet: BarChartDataSet, config: BarDataSetConfi
   if (config.visible !== undefined) dataSet.visible = config.visible;
   if (config.highlightColor) dataSet.highlightColor = toUIColor(config.highlightColor);
   if (config.highlightAlpha !== undefined) dataSet.highlightAlpha = config.highlightAlpha / 255.0;
+  if (config.barBorderWidth !== undefined) dataSet.barBorderWidth = config.barBorderWidth;
+  if (config.barBorderColor) dataSet.barBorderColor = toUIColor(config.barBorderColor);
+  if (config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.valueFormatter = vf;
+    retainedDataObjects.push(vf);
+  }
 }
 
 function applyScatterDataSetConfig(dataSet: ScatterChartDataSet, config: ScatterDataSetConfig): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
-  }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
   }
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
@@ -138,19 +156,15 @@ function applyScatterDataSetConfig(dataSet: ScatterChartDataSet, config: Scatter
 function applyBubbleDataSetConfig(dataSet: BubbleChartDataSet, config: BubbleDataSetConfig): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
-  }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
   }
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
@@ -164,20 +178,17 @@ function applyBubbleDataSetConfig(dataSet: BubbleChartDataSet, config: BubbleDat
 function applyCandleDataSetConfig(dataSet: CandleChartDataSet, config: CandleDataSetConfig): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
   }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
-  }
+
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
   if (config.valueTextSize !== undefined) dataSet.valueFont = dataSet.valueFont.fontWithSize(config.valueTextSize);
@@ -198,6 +209,10 @@ function applyCandleDataSetConfig(dataSet: CandleChartDataSet, config: CandleDat
 export class CombinedChart extends CombinedChartBase {
   private _native: CombinedChartView | null = null;
   private _delegate: CombinedChartViewDelegateImpl | null = null;
+  private _pageDetector: ChartPagingDetector | null = null;
+  private _retainedChartObjects: Array<any> = [];
+  private _retainedDataObjects: NSObject[] = [];
+  private _combinedRenderer: NSCombinedChartRenderer | null = null;
 
   createNativeView(): any {
     nchartsLog('[ncharts] CombinedChart.createNativeView()');
@@ -211,7 +226,6 @@ export class CombinedChart extends CombinedChartBase {
     super.initNativeView();
 
     const instance = this._native!;
-    instance.highlightPerTapEnabled = this.highlightPerTapEnabled;
 
     // Prevent ghosting during animations
     instance.clipsToBounds = true;
@@ -229,9 +243,30 @@ export class CombinedChart extends CombinedChartBase {
     if (this.noDataText) instance.noDataText = this.noDataText;
     applyNoDataTextColorIOS(instance, this.noDataTextColor);
 
+    // angular directive does not await presence of native chart, hence setup needs to happen here
+    if (this.touchEnabled !== undefined) instance.userInteractionEnabled = this.touchEnabled;
+    if (this.dragEnabled !== undefined) instance.dragEnabled = this.dragEnabled;
+    if (this.scaleEnabled !== undefined) instance.setScaleEnabled(this.scaleEnabled);
+    if (this.pinchZoom !== undefined) instance.pinchZoomEnabled = this.pinchZoom;
+    if (this.highlightPerDragEnabled !== undefined) instance.highlightPerDragEnabled = this.highlightPerDragEnabled;
+
     // Set up selection delegate
     this._delegate = CombinedChartViewDelegateImpl.initWithOwner(this);
     instance.delegate = this._delegate;
+
+    // Set up page change detector
+    this._pageDetector = new ChartPagingDetector(
+      this,
+      async (dir, info) => {
+        this.notify({
+          eventName: CombinedChart.pageEvent,
+          object: this,
+          dir,
+          info,
+        });
+      },
+      { idleMs: 160, edgeRatio: 0.08, cooldownMs: 500, pagingMaxScaleX: 1, pagingMaxScaleY: 1 },
+    );
 
     if (this.legend) this._applyLegend(this.legend);
     if (this.xAxis) this._applyXAxis(this.xAxis);
@@ -242,6 +277,12 @@ export class CombinedChart extends CombinedChartBase {
   }
 
   disposeNativeView(): void {
+    this._pageDetector?.detach();
+    this._pageDetector = null;
+    this._retainedChartObjects.length = 0;
+    this._retainedDataObjects.length = 0;
+    this._combinedRenderer?.detach();
+    this._combinedRenderer = null;
     this._delegate = null;
     this._native = null;
     this._nativeChart = null;
@@ -258,6 +299,9 @@ export class CombinedChart extends CombinedChartBase {
     nchartsLog('[ncharts] CombinedChart._applyDataIOS called');
     const instance = this._native;
 
+    // reset highlights to prevent crashes from markers to be drawn on removed data
+    instance.highlightValues(null);
+
     // Stop any running animation
     if (instance.chartAnimator) {
       instance.chartAnimator.stop();
@@ -268,6 +312,31 @@ export class CombinedChart extends CombinedChartBase {
     // Clear highlights
     instance.highlightValues(null);
     instance.layer.contents = null;
+
+    // clear any retained data objects / formatters
+    this._retainedDataObjects.length = 0;
+
+    // setup of non-default draw order
+    if ((this.data as CombinedChartData).drawOrder) {
+      const order: Array<DrawOrderCombinedChart> = this.data.drawOrder;
+      const toIOSDrawOrder = (value: DrawOrderCombinedChart): number => {
+        switch (value) {
+          case 'BAR':
+            return 0;
+          case 'BUBBLE':
+            return 1;
+          case 'LINE':
+            return 2;
+          case 'CANDLE':
+            return 3;
+          case 'SCATTER':
+            return 4;
+          default:
+            return 0; // fallback: BAR
+        }
+      };
+      instance.drawOrder = order.map(toIOSDrawOrder) as any;
+    }
 
     const combinedData = CombinedChartData.alloc().init();
 
@@ -281,12 +350,17 @@ export class CombinedChart extends CombinedChartBase {
           if (typeof value === 'number') {
             entry = ChartDataEntry.alloc().initWithXY(index, value);
           } else {
-            entry = ChartDataEntry.alloc().initWithXY(value.x ?? index, value.y);
+            const x = value.x ?? index;
+            if (!value.marker) {
+              entry = ChartDataEntry.alloc().initWithXY(x, value.y);
+            } else {
+              entry = ChartDataEntry.alloc().initWithXYData(x, value.y, value.marker);
+            }
           }
           entries.push(entry);
         });
         const dataSet = LineChartDataSet.alloc().initWithEntriesLabel(entries, ds.label);
-        if (ds.config) applyLineDataSetConfig(dataSet, ds.config);
+        if (ds.config) applyLineDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
         lineDataSets.push(dataSet);
       }
       const lineData = LineChartData.alloc().initWithDataSets(lineDataSets);
@@ -303,14 +377,22 @@ export class CombinedChart extends CombinedChartBase {
           if (typeof value === 'number') {
             entry = BarChartDataEntry.alloc().initWithXY(index, value);
           } else if (Array.isArray(value.y)) {
-            entry = BarChartDataEntry.alloc().initWithXYValues(value.x ?? index, value.y);
+            if (!value.marker) {
+              entry = BarChartDataEntry.alloc().initWithXYValues(value.x ?? index, value.y);
+            } else {
+              entry = BarChartDataEntry.alloc().initWithXYValuesData(value.x ?? index, value.y, value.marker);
+            }
           } else {
-            entry = BarChartDataEntry.alloc().initWithXY(value.x ?? index, value.y);
+            if (!value.marker) {
+              entry = BarChartDataEntry.alloc().initWithXY(value.x ?? index, value.y);
+            } else {
+              entry = BarChartDataEntry.alloc().initWithXYData(value.x ?? index, value.y, value.marker);
+            }
           }
           entries.push(entry);
         });
         const dataSet = BarChartDataSet.alloc().initWithEntriesLabel(entries, ds.label);
-        if (ds.config) applyBarDataSetConfig(dataSet, ds.config);
+        if (ds.config) applyBarDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
         barDataSets.push(dataSet);
       }
       const barData = BarChartData.alloc().initWithDataSets(barDataSets);
@@ -376,14 +458,35 @@ export class CombinedChart extends CombinedChartBase {
       combinedData.candleData = candleData;
     }
 
+    // install custom renderer if needed
+    this._updateCustomRenderer();
+
     // Use KVC to bypass readonly constraint from protocol
     instance.setValueForKey(combinedData, 'data');
     instance.notifyDataSetChanged();
+
+    // data and animation properties cannot be set in a guranteed order
+    // hence after each data update an animation needs to be executed
+    if (this.animation) this._applyAnimation(this.animation);
+  }
+
+  private _updateCustomRenderer() {
+    const barConfigs = this.data?.barData?.dataSets?.map((ds) => ds.config).filter(Boolean) ?? [];
+    const plotBandConfigs = this.yAxis?.plotBands;
+    const needsCustomRenderer = plotBandConfigs || barConfigs.some((cfg) => cfg?.drawValuesInside);
+    if (!needsCustomRenderer) {
+      this._combinedRenderer?.detach();
+      this._combinedRenderer = null;
+    } else if (this._combinedRenderer) {
+      if (barConfigs) this._combinedRenderer.updateBarConfigs(barConfigs);
+      if (plotBandConfigs) this._combinedRenderer.updatePlotBands(plotBandConfigs);
+    } else {
+      this._combinedRenderer = NSCombinedChartRenderer.create(this._native, barConfigs, this.yAxis?.plotBands);
+    }
   }
 
   protected _applyAnimation(animation: ChartAnimation): void {
     if (!this._native) return;
-
     const instance = this._native;
     if (instance.chartAnimator) {
       instance.chartAnimator.stop();
@@ -431,18 +534,65 @@ export class CombinedChart extends CombinedChartBase {
     applyLegendIOS(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisIOS(this._native, xAxis);
+    applyXAxisIOS(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: any): void {
-    applyYAxisDualIOS(this._native, yAxis);
+    applyYAxisDualIOS(this._native, yAxis, this._retainedChartObjects);
+    this._updateCustomRenderer();
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionIOS(this._native, description);
   }
-  protected _applyMarker(marker: MarkerConfig): void {}
+  protected _applyMarker(marker: MarkerConfig): void {
+    applyMarkerIOS(this._native, marker, this._retainedChartObjects);
+  }
   protected _moveViewToX(xValue: number): void {}
   protected _moveViewTo(xValue: number, yValue: number, axisDependency: string): void {}
   protected _centerViewTo(xValue: number, yValue: number, axisDependency: string): void {}
   protected _zoom(scaleX: number, scaleY: number, x: number, y: number): void {}
   protected _fitScreen(): void {}
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsetsWithLeftTopRightBottom(value.left, value.top, value.right, value.bottom);
+      this._native.notifyDataSetChanged();
+      this._native.setNeedsDisplay();
+    }
+  }
+
+  [touchEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.userInteractionEnabled = value;
+    }
+  }
+
+  [dragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.dragEnabled = value;
+    }
+  }
+
+  [scaleEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setScaleEnabled(value);
+    }
+  }
+
+  [pinchZoomProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.pinchZoomEnabled = value;
+    }
+  }
+
+  [highlightPerDragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.highlightPerDragEnabled = value;
+    }
+  }
+
+  [highlightPerTapEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.highlightPerTapEnabled = value;
+    }
+  }
 }

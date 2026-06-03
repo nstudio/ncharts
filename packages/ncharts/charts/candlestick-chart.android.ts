@@ -1,7 +1,7 @@
 /**
  * CandleStickChart - Android Implementation
  */
-import { CandleStickChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, CandleDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { CandleStickChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, CandleDataSetConfig, nchartsLog, nchartsError, animationProperty, ViewPortOffset, extraOffsetsProperty } from '../common';
 import { toAndroidColor } from './utils';
 import { applyNoDataTextColorAndroid, applyLegendAndroid, applyXAxisAndroid, applyYAxisDualAndroid, applyDescriptionAndroid } from './style-helpers.android';
 
@@ -77,6 +77,7 @@ function applyCandleDataSetConfig(dataSet: com.github.mikephil.charting.data.Can
 export class CandleStickChart extends CandleStickChartBase {
   private _native: com.github.mikephil.charting.charts.CandleStickChart | null = null;
   private _selectionListener: com.github.mikephil.charting.listener.OnChartValueSelectedListener | null = null;
+  private _retainedChartObjects: Array<any> = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] CandleStickChart.createNativeView()');
@@ -132,6 +133,7 @@ export class CandleStickChart extends CandleStickChartBase {
   }
 
   disposeNativeView(): void {
+    this._retainedChartObjects.length = 0;
     this._selectionListener = null;
     this._native = null;
     this._nativeChart = null;
@@ -211,10 +213,10 @@ export class CandleStickChart extends CandleStickChartBase {
     applyLegendAndroid(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisAndroid(this._native, xAxis);
+    applyXAxisAndroid(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    applyYAxisDualAndroid(this._native, yAxis);
+    applyYAxisDualAndroid(this._native, yAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionAndroid(this._native, description);
@@ -245,5 +247,12 @@ export class CandleStickChart extends CandleStickChartBase {
 
   protected _fitScreen(): void {
     this._native?.fitScreen();
+  }
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsets(value.left, value.top, value.right, value.bottom);
+      this._native.invalidate();
+    }
   }
 }

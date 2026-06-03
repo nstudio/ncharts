@@ -1,9 +1,12 @@
 /**
  * BarChart - iOS Implementation
  */
-import { BarChartBase, HorizontalBarChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BarDataSetConfig, nchartsLog, nchartsError } from '../common';
+import { BarChartBase, HorizontalBarChartBase, ChartAnimation, LegendConfig, XAxisConfig, YAxisConfigDual, ChartDescription, MarkerConfig, Highlight, BarDataSetConfig, nchartsLog, nchartsError, ViewPortOffset, extraOffsetsProperty, animationProperty, touchEnabledProperty, dragEnabledProperty, scaleEnabledProperty, pinchZoomProperty, highlightPerDragEnabledProperty, highlightPerTapEnabledProperty } from '../common';
 import { toUIColor, parseEasingIOS } from './utils';
-import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS } from './style-helpers.ios';
+import { applyNoDataTextColorIOS, applyLegendIOS, applyXAxisIOS, applyYAxisDualIOS, applyDescriptionIOS, applyMarkerIOS } from './style-helpers.ios';
+import { NSBarChartRenderer } from './renderers/bar-chart-renderer.ios';
+import { NSSuffixValueFormatter } from './formatters/suffix-value-formatter.ios';
+import { ChartPagingDetector } from './chart-paging-detector/chart-paging-detector';
 
 @NativeClass()
 class BarChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
@@ -36,25 +39,27 @@ class BarChartViewDelegateImpl extends NSObject implements ChartViewDelegate {
       owner.notify({ eventName: BarChart.deselectEvent, object: owner });
     }
   }
+
+  chartScaledScaleXScaleY(chartView: ChartViewBase, scaleX: number, scaleY: number): void {
+    const owner = this._owner?.deref() as any;
+    owner?._pageDetector?.handleScaled();
+  }
 }
 
-function applyBarDataSetConfig(dataSet: BarChartDataSet, config: BarDataSetConfig): void {
+function applyBarDataSetConfig(dataSet: BarChartDataSet, config: BarDataSetConfig, retainedDataObjects: NSObject[]): void {
   if (!dataSet || !config) return;
 
-  if (config.color) {
+  if (config.colors?.length) {
+    dataSet.resetColors();
+    for (const c of config.colors) {
+      const color = toUIColor(c);
+      if (color) dataSet.addColor(color);
+    }
+  } else if (config.color) {
     const color = toUIColor(config.color);
     if (color) dataSet.setColor(color);
   }
-  if (config.colors) {
-    const colors: UIColor[] = [];
-    config.colors.forEach((c: any) => {
-      const color = toUIColor(c);
-      if (color) colors.push(color);
-    });
-    for (const c of colors) {
-      dataSet.addColor(c);
-    }
-  }
+
   if (config.highlightEnabled !== undefined) dataSet.highlightEnabled = config.highlightEnabled;
   if (config.drawValues !== undefined) dataSet.drawValuesEnabled = config.drawValues;
   if (config.valueTextSize !== undefined) dataSet.valueFont = dataSet.valueFont.fontWithSize(config.valueTextSize);
@@ -66,11 +71,22 @@ function applyBarDataSetConfig(dataSet: BarChartDataSet, config: BarDataSetConfi
   if (config.stackLabels) {
     dataSet.stackLabels = config.stackLabels as any;
   }
+  if (config.barBorderWidth !== undefined) dataSet.barBorderWidth = config.barBorderWidth;
+  if (config.barBorderColor) dataSet.barBorderColor = toUIColor(config.barBorderColor);
+  if (config.valueFormatter === 'number' || config.valueFormatter === 'percent' || config.valueFormatter === 'suffix') {
+    const vf = NSSuffixValueFormatter.initWithPattern(config.valueFormatterPattern);
+    dataSet.valueFormatter = vf;
+    retainedDataObjects.push(vf);
+  }
 }
 
 export class BarChart extends BarChartBase {
   protected _native: BarChartView | null = null;
   private _delegate: BarChartViewDelegateImpl | null = null;
+  private _barChartRenderer: NSBarChartRenderer | null = null;
+  private _pageDetector: ChartPagingDetector | null = null;
+  private _retainedChartObjects: Array<any> = [];
+  private _retainedDataObjects: NSObject[] = [];
 
   createNativeView(): any {
     nchartsLog('[ncharts] BarChart.createNativeView()');
@@ -83,10 +99,6 @@ export class BarChart extends BarChartBase {
     super.initNativeView();
 
     const instance = this._native!;
-
-    if (this.highlightPerTapEnabled === true) {
-      instance.highlightPerTapEnabled = this.highlightPerTapEnabled;
-    }
 
     // Prevent ghosting during animations
     instance.clipsToBounds = true;
@@ -114,15 +126,35 @@ export class BarChart extends BarChartBase {
     this._delegate = BarChartViewDelegateImpl.initWithOwner(this);
     instance.delegate = this._delegate;
 
+    // Set up page change detector
+    this._pageDetector = new ChartPagingDetector(
+      this,
+      async (dir, info) => {
+        this.notify({
+          eventName: BarChart.pageEvent,
+          object: this,
+          dir,
+          info,
+        });
+      },
+      { idleMs: 160, edgeRatio: 0.08, cooldownMs: 500, pagingMaxScaleX: 1, pagingMaxScaleY: 1 },
+    );
+
     if (this.legend) this._applyLegend(this.legend);
     if (this.xAxis) this._applyXAxis(this.xAxis);
     if (this.yAxis) this._applyYAxis(this.yAxis);
     if (this.chartDescription) this._applyDescription(this.chartDescription);
-
+    if (this.marker) this._applyMarker(this.marker);
     if (this.data) this.applyData();
   }
 
   disposeNativeView(): void {
+    this._pageDetector?.detach();
+    this._pageDetector = null;
+    this._retainedChartObjects.length = 0;
+    this._retainedDataObjects.length = 0;
+    this._barChartRenderer?.detach();
+    this._barChartRenderer = null;
     this._delegate = null;
     this._native = null;
     this._nativeChart = null;
@@ -150,6 +182,9 @@ export class BarChart extends BarChartBase {
     instance.highlightValues(null);
     instance.layer.contents = null;
 
+    // clear any retained data objects / formatters
+    this._retainedDataObjects.length = 0;
+
     // Build the data sets
     const dataSets: BarChartDataSet[] = [];
 
@@ -166,11 +201,20 @@ export class BarChart extends BarChartBase {
           entry = BarChartDataEntry.alloc().initWithXYValues(index, yVals as any);
         } else {
           const x = value.x ?? index;
-          if (Array.isArray(value.y)) {
-            // Stacked bar with x
-            entry = BarChartDataEntry.alloc().initWithXYValues(x, value.y as any);
+          if (value.marker) {
+            if (Array.isArray(value.y)) {
+              // Stacked bar with x
+              entry = BarChartDataEntry.alloc().initWithXYValuesData(x, value.y as any, value.marker);
+            } else {
+              entry = BarChartDataEntry.alloc().initWithXYData(x, value.y, value.marker);
+            }
           } else {
-            entry = BarChartDataEntry.alloc().initWithXY(x, value.y);
+            if (Array.isArray(value.y)) {
+              // Stacked bar with x
+              entry = BarChartDataEntry.alloc().initWithXYValues(x, value.y as any);
+            } else {
+              entry = BarChartDataEntry.alloc().initWithXY(x, value.y);
+            }
           }
         }
         entries.push(entry);
@@ -178,7 +222,7 @@ export class BarChart extends BarChartBase {
 
       const dataSet = BarChartDataSet.alloc().initWithEntriesLabel(entries, ds.label);
       if (ds.config) {
-        applyBarDataSetConfig(dataSet, ds.config);
+        applyBarDataSetConfig(dataSet, ds.config, this._retainedDataObjects);
       }
       dataSets.push(dataSet);
     }
@@ -196,14 +240,26 @@ export class BarChart extends BarChartBase {
       chartData.groupBarsFromXGroupSpaceBarSpace(group.fromX, group.groupSpace, group.barSpace);
     }
 
+    // install custom renderer if needed
+    const barConfigs = this.data?.dataSets?.map((ds) => ds.config).filter(Boolean) ?? [];
+    const needsCustomBarRenderer = barConfigs.some((cfg) => cfg?.drawValuesInside);
+    this._barChartRenderer?.detach();
+    this._barChartRenderer = null;
+    if (needsCustomBarRenderer) {
+      this._barChartRenderer = NSBarChartRenderer.create(instance, barConfigs);
+    }
+
     // Use KVC to bypass readonly constraint from protocol
     instance.setValueForKey(chartData, 'data');
     instance.notifyDataSetChanged();
+
+    // data and animation properties cannot be set in a guranteed order
+    // hence after each data update an animation needs to be executed
+    if (this.animation) this._applyAnimation(this.animation);
   }
 
   protected _applyAnimation(animation: ChartAnimation): void {
     if (!this._native) return;
-
     const instance = this._native;
     if (instance.chartAnimator) {
       instance.chartAnimator.stop();
@@ -251,15 +307,18 @@ export class BarChart extends BarChartBase {
     applyLegendIOS(this._native, legend);
   }
   protected _applyXAxis(xAxis: XAxisConfig): void {
-    applyXAxisIOS(this._native, xAxis);
+    applyXAxisIOS(this._native, xAxis, this._retainedChartObjects);
   }
   protected _applyYAxis(yAxis: YAxisConfigDual): void {
-    applyYAxisDualIOS(this._native, yAxis);
+    applyYAxisDualIOS(this._native, yAxis, this._retainedChartObjects);
   }
   protected _applyDescription(description: ChartDescription): void {
     applyDescriptionIOS(this._native, description);
   }
-  protected _applyMarker(marker: MarkerConfig): void {}
+
+  protected _applyMarker(marker: MarkerConfig): void {
+    applyMarkerIOS(this._native, marker, this._retainedChartObjects);
+  }
 
   protected _moveViewToX(xValue: number): void {
     this._native?.moveViewToX(xValue);
@@ -282,6 +341,50 @@ export class BarChart extends BarChartBase {
 
   protected _fitScreen(): void {
     this._native?.fitScreen();
+  }
+
+  [extraOffsetsProperty.setNative](value: ViewPortOffset) {
+    if (this._native && value) {
+      this._native.setExtraOffsetsWithLeftTopRightBottom(value.left, value.top, value.right, value.bottom);
+      this._native.notifyDataSetChanged();
+      this._native.setNeedsDisplay();
+    }
+  }
+
+  [touchEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.userInteractionEnabled = value;
+    }
+  }
+
+  [dragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.dragEnabled = value;
+    }
+  }
+
+  [scaleEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.setScaleEnabled(value);
+    }
+  }
+
+  [pinchZoomProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.pinchZoomEnabled = value;
+    }
+  }
+
+  [highlightPerDragEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.highlightPerDragEnabled = value;
+    }
+  }
+
+  [highlightPerTapEnabledProperty.setNative](value: boolean) {
+    if (this._native) {
+      this._native.highlightPerTapEnabled = value;
+    }
   }
 }
 

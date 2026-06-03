@@ -130,15 +130,19 @@ describe('style-helpers Android', () => {
       setAvoidFirstLastClipping: vi.fn(),
     };
     const nativeChart: any = { getXAxis: () => nativeXAxis };
-
-    applyXAxisAndroid(nativeChart, {
-      enabled: true,
-      textColor: '#FFFFFF',
-      textSize: 12,
-      position: 'TOP_INSIDE',
-      labelCount: 5,
-      labelCountForce: true,
-    });
+    const retainedChartObjects: any[] = [];
+    applyXAxisAndroid(
+      nativeChart,
+      {
+        enabled: true,
+        textColor: '#FFFFFF',
+        textSize: 12,
+        position: 'TOP_INSIDE',
+        labelCount: 5,
+        labelCountForce: true,
+      },
+      retainedChartObjects,
+    );
 
     expect(nativeXAxis.setEnabled).toHaveBeenCalledWith(true);
     expect(nativeXAxis.setTextColor).toHaveBeenCalledWith(0xff112233);
@@ -201,17 +205,22 @@ describe('style-helpers Android', () => {
       getAxisRight: () => rightAxis,
     };
 
-    applyYAxisDualAndroid(nativeChart, {
-      left: {
-        textColor: '#FFFFFF',
-        position: 'INSIDE_CHART',
-        zeroLine: { enabled: true, lineWidth: 2, lineColor: '#00FF00' },
+    const retainedChartObjects: any[] = [];
+    applyYAxisDualAndroid(
+      nativeChart,
+      {
+        left: {
+          textColor: '#FFFFFF',
+          position: 'INSIDE_CHART',
+          zeroLine: { enabled: true, lineWidth: 2, lineColor: '#00FF00' },
+        },
+        right: {
+          textColor: '#FF00FF',
+          position: 'OUTSIDE_CHART',
+        },
       },
-      right: {
-        textColor: '#FF00FF',
-        position: 'OUTSIDE_CHART',
-      },
-    });
+      retainedChartObjects,
+    );
 
     expect(leftAxis.setTextColor).toHaveBeenCalledWith(0xff112233);
     expect(leftAxis.setPosition).toHaveBeenCalledWith('INSIDE');

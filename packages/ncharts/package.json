@@ -1,6 +1,6 @@
 {
   "name": "@nstudio/ncharts",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Native iOS/Android charting for NativeScript using DGCharts (iOS) and MPAndroidChart (Android)",
   "main": "index",
   "types": "index.d.ts",
@@ -91,7 +91,7 @@
       "default": "./index.ios.js"
     },
     "./angular": {
-      "types": "./angular/index.d.ts",
+      "types": "./angular/types/nstudio-ncharts-angular.d.ts",
       "default": "./angular/fesm2022/nstudio-ncharts-angular.mjs"
     },
     "./react": {
