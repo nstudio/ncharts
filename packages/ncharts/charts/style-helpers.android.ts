@@ -136,7 +136,10 @@ export function resolveAxisValueFormatterAndroid(config: AxisBaseLike): any | un
     case 'date': {
       const pattern = valueFormatterPattern ?? 'MMM d, yyyy';
       const dateFormat = new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault());
-      return new com.github.mikephil.charting.formatter.ValueFormatter({
+      // ValueFormatter is abstract in TS typings; NativeScript instantiates it
+      // at runtime by passing an implementation object — cast bypasses the TS guard.
+      const ValueFormatterCtor = com.github.mikephil.charting.formatter.ValueFormatter as unknown as new (impl: object) => unknown;
+      return new ValueFormatterCtor({
         getFormattedValue(value: number): string {
           return dateFormat.format(new java.util.Date(value));
         },
@@ -148,7 +151,8 @@ export function resolveAxisValueFormatterAndroid(config: AxisBaseLike): any | un
     case 'labelByXValue': {
       const lookup = new Map<number, string>();
       (valueFormatterLabels ?? []).forEach((entry) => lookup.set(entry.x, entry.label));
-      return new com.github.mikephil.charting.formatter.ValueFormatter({
+      const ValueFormatterCtor = com.github.mikephil.charting.formatter.ValueFormatter as unknown as new (impl: object) => unknown;
+      return new ValueFormatterCtor({
         getFormattedValue(value: number): string {
           return lookup.get(value) ?? `${value}`;
         },
