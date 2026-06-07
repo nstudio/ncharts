@@ -1,3 +1,15 @@
+## 1.1.0 (2026-06-07)
+
+### 🚀 Features
+
+- valueFormatter options ([6164d97](https://github.com/nstudio/ncharts/commit/6164d97))
+- api extensions, marker support, styling improvements ([#5](https://github.com/nstudio/ncharts/pull/5))
+
+### ❤️ Thank You
+
+- cjohn001 @cjohn001
+- Nathan Walker
+
 ## 1.0.2 (2026-02-16)
 
 ### 🚀 Features
